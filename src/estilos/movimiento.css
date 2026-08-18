@@ -1,0 +1,200 @@
+/*
+ * El movimiento, en un solo sitio.
+ *
+ * EL PROBLEMA QUE RESUELVE. Antes cada componente ponía su propia transición a
+ * ojo — 0.15s ease aquí, nada allá, un `display: none` que aparecía de golpe más
+ * allá — y el resultado se sentía, en sus palabras, «ortopédico». No era una
+ * animación mala: era la falta de un sistema. Cuando cada cosa se mueve a su
+ * ritmo, el conjunto parece que se rompe y se recompone en vez de moverse.
+ *
+ * LAS TRES REGLAS que sigue todo lo de aquí:
+ *
+ * 1. SOLO `transform` Y `opacity`. Son las dos únicas propiedades que el
+ *    navegador puede animar sin volver a calcular la disposición de la página.
+ *    Animar `height`, `width`, `top` o `margin` obliga a rehacer el layout en
+ *    cada fotograma, y eso es exactamente lo que se ve como tirones.
+ * 2. LA CURVA IMPORTA MÁS QUE LA DURACIÓN. `ease` (la de fábrica) arranca lento
+ *    y frena lento: es simétrica, y nada en el mundo físico se mueve así. Lo que
+ *    se lee como caro es salir rápido y frenar largo, que es lo que hacen las
+ *    curvas de abajo.
+ * 3. LO QUE ENTRA, ENTRA DESDE DONDE ESTABA. Un panel de la derecha entra
+ *    deslizando desde la derecha, no apareciendo en el centro. El movimiento
+ *    tiene que contar de dónde viene la cosa.
+ */
+
+:root {
+  /* Salir disparado y frenar largo. Es la curva de casi todo. */
+  --sale: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Para lo que se va: rápido al final, sin ceremonia. */
+  --entra: cubic-bezier(0.4, 0, 1, 1);
+  /* Un punto de rebote, solo para lo que aparece de la nada. */
+  --resorte: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --veloz: 120ms;
+  --normal: 220ms;
+  --calmo: 340ms;
+  --largo: 480ms;
+}
+
+/*
+ * Nadie que haya pedido menos movimiento ve nada de esto.
+ *
+ * No es «animaciones más cortas»: es ninguna. Para quien tiene vértigo o
+ * migraña vestibular, una transición suave sigue siendo una transición.
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --veloz: 0.01ms;
+    --normal: 0.01ms;
+    --calmo: 0.01ms;
+    --largo: 0.01ms;
+  }
+}
+
+/* ── Entradas ─────────────────────────────────────────────────────────────── */
+
+@keyframes surgir {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes asomar {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes entrar-derecha {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes entrar-izquierda {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes entrar-abajo {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes crecer {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+}
+
+/* ── Piezas que usan el sistema ───────────────────────────────────────────── */
+
+/*
+ * El panel lateral entra deslizando desde su propio lado.
+ *
+ * `will-change` avisa al navegador de que va a mover esto, para que lo suba a
+ * su propia capa ANTES del primer fotograma; sin él, el primer frame de un
+ * panel grande se salta casi siempre.
+ */
+.panel {
+  animation: entrar-derecha var(--calmo) var(--sale);
+  will-change: transform;
+}
+
+.panel--izquierda {
+  animation-name: entrar-izquierda;
+}
+
+.panel-velo {
+  animation: asomar var(--normal) var(--sale);
+}
+
+.capitulos {
+  animation: entrar-izquierda var(--calmo) var(--sale);
+  will-change: transform;
+}
+
+.previa {
+  animation: asomar var(--normal) var(--sale);
+}
+
+/* Los diálogos aparecen de la nada, así que se les permite el rebote. */
+.velo {
+  animation: asomar var(--normal) var(--sale);
+}
+
+.dialogo {
+  animation: crecer var(--calmo) var(--resorte);
+}
+
+/*
+ * La estantería aparece escalonada: cada portada entra un pelín después que la
+ * anterior. Es la diferencia entre «ha cargado una página» y «se ha abierto una
+ * estantería». Cuesta cero: es un retardo calculado en CSS.
+ */
+.obra {
+  animation: surgir var(--calmo) var(--sale) backwards;
+  animation-delay: calc(var(--indice, 0) * 45ms);
+}
+
+.aviso {
+  animation: crecer var(--normal) var(--resorte);
+}
+
+/* ── Botones: el gesto de pulsar ──────────────────────────────────────────── */
+
+/*
+ * Lo que hace que un botón se sienta físico no es el hover, es el `:active`.
+ * Bajar dos píxeles al pulsar y volver es lo que convierte un rectángulo que
+ * cambia de color en algo que se ha hundido bajo el dedo.
+ */
+.boton,
+.opcion,
+.fuente,
+.sello,
+.color,
+.acento,
+.segmentado__opcion,
+.capitulo,
+.gadget {
+  transition:
+    background-color var(--veloz) var(--sale),
+    border-color var(--veloz) var(--sale),
+    color var(--veloz) var(--sale),
+    transform var(--veloz) var(--sale),
+    box-shadow var(--normal) var(--sale);
+}
+
+.boton:active,
+.opcion:active,
+.fuente:active,
+.sello:active,
+.segmentado__opcion:active {
+  transform: translateY(1px);
+}
+
+.color:active,
+.acento:active {
+  transform: scale(0.92);
+}
+
+/* ── Cambios de pantalla ──────────────────────────────────────────────────── */
+
+/*
+ * Cambiar de la estantería al taller y al revés.
+ *
+ * Sin esto el salto es instantáneo y desorienta: estabas mirando portadas y de
+ * pronto hay un folio en blanco. Doscientos milisegundos de fundido bastan para
+ * que el ojo entienda que ha cambiado de sitio.
+ */
+.pantalla {
+  animation: asomar var(--normal) var(--sale);
+}
+
+.pantalla--taller {
+  animation: surgir var(--calmo) var(--sale);
+}

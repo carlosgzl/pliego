@@ -1,17 +1,28 @@
 /**
- * El Taller: the screen you actually write on.
+ * El Taller: la pantalla en la que se escribe.
  *
- * A thin bar, the manuscript, and NOTHING ELSE by default. Everything optional
- * — the chapter list, the composed page, the design panel — is behind a control
- * you press when you want it, and is remembered for next time. The measure of
- * this screen is whether you forget it is there.
+ * REHECHO tras su veredicto: la barra era «confusa y rara», la página compuesta
+ * salía en una tira de 260 px debajo del texto donde no se leía nada, y el
+ * conjunto se sentía «ortopédico». Tres cosas cambian de raíz:
  *
- * The manuscript is a plain <textarea>. That is a decision, not a shortcut: a
- * contenteditable rich editor is where writing apps go to lose paragraphs to
- * clipboard bugs and IME races, and a textarea gives us the browser's own undo
- * stack, its own spellchecker and its own accessibility for free. Everything
- * that would need rich text — the marks, the drop caps, the page — happens in
- * the galley beside it, which is where a writer looks for it anyway.
+ * 1. LA PÁGINA VA AL LADO, no debajo. Una página es alta y estrecha; ponerla en
+ *    una franja horizontal la obliga a medir cuatro dedos. A la derecha (o a la
+ *    izquierda, para quien escribe con el índice de capítulos abierto) coge
+ *    todo el alto de la pantalla y se lee de verdad.
+ * 2. LA BARRA SON TRES ZONAS. Salir e índice a la izquierda, el libro en el
+ *    centro, y a la derecha dos menús — «Escribir» y «Ver» — con el nombre de
+ *    cada acción escrito y su atajo al lado. Dos botones en vez de nueve
+ *    iconos que había que adivinar.
+ * 3. GADGETS ELEGIBLES arriba o abajo: palabras, lo escrito hoy, la página, el
+ *    cronómetro de la sesión. Los enciende quien quiera; a quien le estorbe una
+ *    cuenta de palabras mientras escribe, los apaga todos.
+ *
+ * El manuscrito sigue siendo un <textarea>. Es una decisión, no un atajo: un
+ * editor rico con contenteditable es donde las aplicaciones de escribir pierden
+ * párrafos por culpa del portapapeles y del IME, y un textarea trae gratis el
+ * deshacer del navegador, su corrector y su accesibilidad. Todo lo que pediría
+ * texto rico —las marcas, las capitulares, la página— pasa en la galera de al
+ * lado, que es donde un escritor lo busca.
  */
 
 import {
@@ -28,7 +39,6 @@ import {
   bloqueEnPosicion,
   capitulosDe,
   contarPalabras,
-  minutosDeLectura,
   partirEnBloques,
 } from "@/nucleo/bloques";
 import {
@@ -41,12 +51,15 @@ import {
   type Edicion,
 } from "@/nucleo/edicion";
 import { pilaDe } from "@/nucleo/fuentes";
+import { medidaMm } from "@/nucleo/geometria";
 import { componer, descomponer, type Meta } from "@/nucleo/libro";
 import { guardarLibro, leerLibro, type ResultadoGuardado } from "@/datos/biblioteca";
 import { ficheroDeMuestra } from "@/datos/muestra";
-import { marcarArranque, palabrasDeHoy, type Ajustes } from "@/datos/ajustes";
+import { marcarArranque, palabrasDeHoy, type Ajustes, type SitioPrevia } from "@/datos/ajustes";
 import { avisar } from "@/ui/Avisos";
 import { Icono } from "@/ui/Icono";
+import { BotonBarra, GrupoBarra, MenuBarra, type Accion } from "./BarraTaller";
+import { BarraGadgets } from "./Gadgets";
 import { Galera } from "./Galera";
 import { ListaCapitulos } from "./ListaCapitulos";
 import { Resaltado, TOPE_RESALTADO } from "./Manuscrito";
@@ -54,7 +67,7 @@ import { PanelDiseno } from "./PanelDiseno";
 import { Lector } from "./Lector";
 import { Exportar } from "./Exportar";
 
-/** How long after the last keystroke the book is written. */
+/** Cuánto se espera tras la última tecla antes de escribir el libro. */
 const ESPERA_GUARDADO = 1200;
 
 type Estado = "abriendo" | "limpio" | "escribiendo" | "guardando" | "guardado" | "problema";
@@ -68,7 +81,7 @@ export function Taller({
   onEntrar,
 }: {
   slug: string;
-  /** Nobody has signed in: the sample book, and nothing is written anywhere. */
+  /** Nadie ha entrado: el libro de muestra, y no se escribe en ningún sitio. */
   demo: boolean;
   ajustes: Ajustes;
   onAjustes: (ajustes: Ajustes) => void;
@@ -90,14 +103,16 @@ export function Taller({
   const scroller = useRef<HTMLDivElement>(null);
   const temporizador = useRef<number | null>(null);
   const ultimoGuardado = useRef("");
+  /** Cuándo se abrió este libro: es el cronómetro de la sesión. */
+  const desde = useRef(Date.now());
 
-  /* ── Opening ─────────────────────────────────────────────────────────────── */
+  /* ── Abrir ───────────────────────────────────────────────────────────────── */
 
   useEffect(() => {
     let vivo = true;
     void (async () => {
-      // Nobody signed in: the sample book, straight from memory. No request is
-      // made at all — a visitor's browser never reaches for his library.
+      // Sin sesión, el libro de muestra directo de memoria: el navegador de un
+      // visitante no va a buscar su biblioteca ni una sola vez.
       const fichero = demo ? ficheroDeMuestra() : await leerLibro(slug);
       if (!vivo) {
         return;
@@ -119,14 +134,14 @@ export function Taller({
     };
   }, [slug, demo, onSalir]);
 
-  /* ── Derived ─────────────────────────────────────────────────────────────── */
+  /* ── Derivados ───────────────────────────────────────────────────────────── */
 
   const bloques = useMemo(() => partirEnBloques(cuerpo), [cuerpo]);
   const capitulos = useMemo(() => capitulosDe(bloques), [bloques]);
   const palabras = useMemo(() => contarPalabras(cuerpo), [cuerpo]);
   const hoy = palabrasDeHoy(slug, palabras);
 
-  const capituloActual = useMemo(() => {
+  const indiceCapitulo = useMemo(() => {
     const indiceBloque = bloqueEnPosicion(bloques, cursor);
     let capitulo = -1;
     for (let i = 0; i <= indiceBloque && i < bloques.length; i += 1) {
@@ -137,7 +152,9 @@ export function Taller({
     return capitulo;
   }, [bloques, cursor]);
 
-  /* ── Saving ──────────────────────────────────────────────────────────────── */
+  const capituloActual = capitulos[indiceCapitulo] ?? null;
+
+  /* ── Guardar ─────────────────────────────────────────────────────────────── */
 
   const guardar = useCallback(
     async (metaAhora: Meta, cuerpoAhora: string) => {
@@ -147,8 +164,6 @@ export function Taller({
         return;
       }
       if (demo) {
-        // The sample book is never written anywhere, and the bar says so rather
-        // than showing a tick over text that will vanish with the tab.
         setEstado("problema");
         setProblema("Es el libro de muestra: no se guarda. Entra para escribir el tuyo.");
         return;
@@ -172,9 +187,6 @@ export function Taller({
     [slug, demo],
   );
 
-  /* Debounced autosave. The timer is cleared on unmount AND the book is written
-     one last time, because leaving the workshop is exactly when a writer
-     assumes their work is safe. */
   useEffect(() => {
     if (!meta || estado === "abriendo") {
       return;
@@ -199,14 +211,11 @@ export function Taller({
     onSalir();
   }, [meta, cuerpo, guardar, onSalir]);
 
-  /* Closing the tab with text that has not landed anywhere durable. */
   useEffect(() => {
     if (!ajustes.avisarSalida) {
       return;
     }
     const alSalir = (evento: BeforeUnloadEvent) => {
-      // Never for the sample book: warning somebody that they are about to lose
-      // text that was never going to be saved is just noise.
       if (!demo && (estado === "escribiendo" || estado === "guardando" || estado === "problema")) {
         evento.preventDefault();
       }
@@ -215,14 +224,12 @@ export function Taller({
     return () => window.removeEventListener("beforeunload", alSalir);
   }, [estado, demo, ajustes.avisarSalida]);
 
-  /* ── Editing ─────────────────────────────────────────────────────────────── */
+  /* ── Editar ──────────────────────────────────────────────────────────────── */
 
   const aplicar = useCallback((edicion: Edicion) => {
     setCuerpo(edicion.texto);
     setEstado("escribiendo");
     setCursor(edicion.desde);
-    // The caret has to be restored AFTER React has written the new value, or
-    // the browser puts it at the end and the writer loses their place.
     requestAnimationFrame(() => {
       const nodo = area.current;
       if (nodo) {
@@ -243,6 +250,11 @@ export function Taller({
     [cuerpo, aplicar],
   );
 
+  const negrita = () => conSeleccion((t, d, h) => envolver(t, d, h, "**"));
+  const cursiva = () => conSeleccion((t, d, h) => envolver(t, d, h, "*"));
+  const capitulo = () => aplicar(alternarTitulo(cuerpo, area.current?.selectionStart ?? 0, 1));
+  const escena = () => aplicar(nuevaEscena(cuerpo, area.current?.selectionStart ?? 0));
+
   const alTeclear = (evento: ReactKeyboardEvent<HTMLTextAreaElement>) => {
     const nodo = evento.currentTarget;
     const mando = evento.ctrlKey || evento.metaKey;
@@ -251,12 +263,12 @@ export function Taller({
       const tecla = evento.key.toLowerCase();
       if (tecla === "b") {
         evento.preventDefault();
-        conSeleccion((texto, desde, hasta) => envolver(texto, desde, hasta, "**"));
+        negrita();
         return;
       }
       if (tecla === "i") {
         evento.preventDefault();
-        conSeleccion((texto, desde, hasta) => envolver(texto, desde, hasta, "*"));
+        cursiva();
         return;
       }
       if (tecla === "1" || tecla === "2") {
@@ -273,7 +285,7 @@ export function Taller({
       }
       if (tecla === "enter") {
         evento.preventDefault();
-        aplicar(nuevaEscena(cuerpo, nodo.selectionStart));
+        escena();
         return;
       }
     }
@@ -304,8 +316,6 @@ export function Taller({
     setCursor(posicion);
   };
 
-  /* The textarea grows with its content: the container scrolls, not the field,
-     so the caret never sits behind a second scrollbar. */
   useLayoutEffect(() => {
     const nodo = area.current;
     if (!nodo) {
@@ -315,7 +325,6 @@ export function Taller({
     nodo.style.height = `${nodo.scrollHeight}px`;
   }, [cuerpo, ajustes.tamanoEditor, ajustes.anchoEditor, ajustes.interlineadoEditor]);
 
-  /* Typewriter scrolling: keep the caret line near the middle of the screen. */
   useEffect(() => {
     if (!ajustes.maquina) {
       return;
@@ -331,16 +340,18 @@ export function Taller({
     caja.scrollTo({ top: Math.max(0, objetivo), behavior: "smooth" });
   }, [cursor, ajustes.maquina, ajustes.tamanoEditor, ajustes.interlineadoEditor, cuerpo]);
 
-  /* ── Resizing the preview ────────────────────────────────────────────────── */
+  /* ── Mover el tirador de la previa ───────────────────────────────────────── */
 
   const arrastrar = (evento: ReactPointerEvent) => {
     evento.preventDefault();
-    const lado = ajustes.previa === "lado";
+    const lado = ajustes.previa === "derecha" || ajustes.previa === "izquierda";
     const inicio = lado ? evento.clientX : evento.clientY;
-    const desde = ajustes.previaTamano;
+    const desdeTamano = ajustes.previaTamano;
+    // A la izquierda el arrastre va al revés: alejarse del borde la agranda.
+    const signo = ajustes.previa === "izquierda" ? -1 : 1;
     const mover = (mueve: PointerEvent) => {
-      const delta = lado ? inicio - mueve.clientX : inicio - mueve.clientY;
-      onAjustes({ ...ajustes, previaTamano: Math.min(900, Math.max(120, desde + delta)) });
+      const delta = (lado ? inicio - mueve.clientX : inicio - mueve.clientY) * signo;
+      onAjustes({ ...ajustes, previaTamano: Math.min(1000, Math.max(200, desdeTamano + delta)) });
     };
     const soltar = () => {
       window.removeEventListener("pointermove", mover);
@@ -355,7 +366,7 @@ export function Taller({
       <div className="taller">
         <div className="barra">
           <button type="button" className="boton boton--desnudo" onClick={onSalir}>
-            <Icono nombre="atras" /> Estantería
+            <Icono nombre="atras" /> <span className="boton__texto">Volver</span>
           </button>
         </div>
         <p className="campo__nota" style={{ padding: "2rem", textAlign: "center" }}>
@@ -365,8 +376,10 @@ export function Taller({
     );
   }
 
-  /* The mirror and the textarea must be given the SAME type, from one object,
-     so no edit can ever set one and forget the other. */
+  const alLado = ajustes.previa === "derecha" || ajustes.previa === "izquierda";
+  const previaVisible = ajustes.previa !== "oculta" && !pantallaCompleta;
+  const altoPagina = alLado ? undefined : ajustes.previaTamano;
+
   const tipoEditor = {
     fontFamily: pilaDe(ajustes.fuenteEditor),
     fontSize: `${ajustes.tamanoEditor}px`,
@@ -374,176 +387,182 @@ export function Taller({
   };
   const resaltado = cuerpo.length <= TOPE_RESALTADO;
 
-  const previaVisible = ajustes.previa !== "oculta" && !pantallaCompleta;
-  const altoPagina =
-    ajustes.previa === "lado" ? Math.min(720, ajustes.previaTamano * 1.35) : ajustes.previaTamano;
+  const ponerPrevia = (sitio: SitioPrevia) => onAjustes({ ...ajustes, previa: sitio });
+
+  const accionesEscribir: Accion[] = [
+    { clave: "b", nombre: "Negrita", icono: "negrita", atajo: "Ctrl+B", hacer: negrita },
+    { clave: "i", nombre: "Cursiva", icono: "cursiva", atajo: "Ctrl+I", hacer: cursiva },
+    { clave: "cap", nombre: "Convertir en capítulo", icono: "capitulo", atajo: "Ctrl+1", hacer: capitulo },
+    { clave: "esc", nombre: "Separar escena", icono: "escena", atajo: "Ctrl+↵", hacer: escena },
+    {
+      clave: "foco",
+      nombre: "Modo foco",
+      icono: "foco",
+      puesto: ajustes.foco,
+      hacer: () => onAjustes({ ...ajustes, foco: !ajustes.foco }),
+    },
+    {
+      clave: "maquina",
+      nombre: "Scroll de máquina de escribir",
+      icono: "flecha",
+      puesto: ajustes.maquina,
+      hacer: () => onAjustes({ ...ajustes, maquina: !ajustes.maquina }),
+    },
+  ];
+
+  const accionesVer: Accion[] = [
+    {
+      clave: "derecha",
+      nombre: "Página a la derecha",
+      icono: "ojo",
+      puesto: ajustes.previa === "derecha",
+      hacer: () => ponerPrevia("derecha"),
+    },
+    {
+      clave: "izquierda",
+      nombre: "Página a la izquierda",
+      icono: "ojo",
+      puesto: ajustes.previa === "izquierda",
+      hacer: () => ponerPrevia("izquierda"),
+    },
+    {
+      clave: "abajo",
+      nombre: "Página abajo",
+      icono: "ojo",
+      puesto: ajustes.previa === "abajo",
+      hacer: () => ponerPrevia("abajo"),
+    },
+    {
+      clave: "oculta",
+      nombre: "Sin página",
+      icono: "cerrar",
+      puesto: ajustes.previa === "oculta",
+      hacer: () => ponerPrevia("oculta"),
+    },
+    {
+      clave: "gadgets",
+      nombre:
+        ajustes.sitioGadgets === "oculta"
+          ? "Enseñar los gadgets"
+          : ajustes.sitioGadgets === "abajo"
+            ? "Gadgets arriba"
+            : "Esconder los gadgets",
+      icono: "panel",
+      hacer: () =>
+        onAjustes({
+          ...ajustes,
+          sitioGadgets:
+            ajustes.sitioGadgets === "oculta"
+              ? "abajo"
+              : ajustes.sitioGadgets === "abajo"
+                ? "arriba"
+                : "oculta",
+        }),
+    },
+    { clave: "leer", nombre: "Leer el libro entero", icono: "libro", hacer: () => setLeyendo(true) },
+    {
+      clave: "pantalla",
+      nombre: "Solo el texto",
+      icono: "expandir",
+      atajo: "Esc para salir",
+      hacer: () => setPantallaCompleta(true),
+    },
+  ];
+
+  const datosGadgets = {
+    palabras,
+    hoy,
+    meta: meta.meta ?? 0,
+    pagina,
+    paginas,
+    capitulo: capituloActual?.titulo ?? null,
+    palabrasCapitulo: capituloActual?.palabras ?? 0,
+    desde: desde.current,
+  };
+
+  const gadgets =
+    ajustes.sitioGadgets !== "oculta" && !pantallaCompleta ? (
+      <BarraGadgets
+        activos={ajustes.gadgets}
+        datos={datosGadgets}
+        sitio={ajustes.sitioGadgets}
+      />
+    ) : null;
 
   return (
-    <div className="taller">
+    <div className="taller pantalla pantalla--taller">
       {!pantallaCompleta && (
         <div className="barra">
-          <button
-            type="button"
-            className="boton boton--desnudo"
-            onClick={salir}
-            title="Volver a la estantería"
-          >
-            <Icono nombre="atras" />
-          </button>
+          <GrupoBarra>
+            <BotonBarra nombre="Volver" icono="atras" onClick={salir} />
+            <BotonBarra
+              nombre="Índice"
+              icono="capitulos"
+              puesto={ajustes.capitulos}
+              onClick={() => onAjustes({ ...ajustes, capitulos: !ajustes.capitulos })}
+            />
+          </GrupoBarra>
 
-          <button
-            type="button"
-            className="boton boton--desnudo"
-            aria-pressed={ajustes.capitulos}
-            onClick={() => onAjustes({ ...ajustes, capitulos: !ajustes.capitulos })}
-            title="Capítulos"
-          >
-            <Icono nombre="capitulos" />
-          </button>
-
-          <span className="barra__titulo">{meta.titulo}</span>
-
-          <span className="barra__hueco" />
-
-          <div style={{ display: "flex", gap: "0.15rem" }}>
-            <button
-              type="button"
-              className="boton boton--desnudo"
-              onClick={() => conSeleccion((t, d, h) => envolver(t, d, h, "**"))}
-              title="Negrita (Ctrl+B)"
-            >
-              <Icono nombre="negrita" />
-            </button>
-            <button
-              type="button"
-              className="boton boton--desnudo"
-              onClick={() => conSeleccion((t, d, h) => envolver(t, d, h, "*"))}
-              title="Cursiva (Ctrl+I)"
-            >
-              <Icono nombre="cursiva" />
-            </button>
-            <button
-              type="button"
-              className="boton boton--desnudo"
-              onClick={() => aplicar(alternarTitulo(cuerpo, area.current?.selectionStart ?? 0, 1))}
-              title="Convertir en capítulo (Ctrl+1)"
-            >
-              <Icono nombre="capitulo" />
-            </button>
-            <button
-              type="button"
-              className="boton boton--desnudo"
-              onClick={() => aplicar(nuevaEscena(cuerpo, area.current?.selectionStart ?? 0))}
-              title="Separar escena (Ctrl+Intro)"
-            >
-              <Icono nombre="escena" />
-            </button>
-          </div>
-
-          <span className="barra__cuenta" title={`${minutosDeLectura(palabras)} min de lectura`}>
-            {palabras.toLocaleString("es-ES")} palabras
-            {hoy !== 0 && (
-              <>
-                {" · "}
-                <span style={{ color: hoy > 0 ? "var(--bien)" : "var(--tenue)" }}>
-                  {hoy > 0 ? "+" : ""}
-                  {hoy.toLocaleString("es-ES")} hoy
-                </span>
-              </>
+          <div className="barra__libro">
+            <span className="barra__titulo">{meta.titulo}</span>
+            {demo ? (
+              <span className="barra__aviso">libro de muestra</span>
+            ) : (
+              <Guardado estado={estado} problema={problema} />
             )}
-          </span>
-
-          {demo ? (
-            <button type="button" className="boton boton--principal" onClick={onEntrar}>
-              Entrar para escribir
-            </button>
-          ) : (
-            <Guardado estado={estado} problema={problema} />
-          )}
-
-          <div style={{ display: "flex", gap: "0.15rem" }}>
-            <button
-              type="button"
-              className="boton boton--desnudo"
-              aria-pressed={ajustes.previa !== "oculta"}
-              onClick={() =>
-                onAjustes({
-                  ...ajustes,
-                  previa:
-                    ajustes.previa === "oculta"
-                      ? "abajo"
-                      : ajustes.previa === "abajo"
-                        ? "lado"
-                        : "oculta",
-                })
-              }
-              title={
-                ajustes.previa === "oculta"
-                  ? "Ver la página compuesta"
-                  : ajustes.previa === "abajo"
-                    ? "Ponerla al lado"
-                    : "Esconderla"
-              }
-            >
-              <Icono nombre="ojo" />
-            </button>
-            <button
-              type="button"
-              className="boton boton--desnudo"
-              onClick={() => setLeyendo(true)}
-              title="Leer el libro entero"
-            >
-              <Icono nombre="libro" />
-            </button>
-            <button
-              type="button"
-              className="boton boton--desnudo"
-              aria-pressed={ajustes.foco}
-              onClick={() => onAjustes({ ...ajustes, foco: !ajustes.foco })}
-              title="Modo foco"
-            >
-              <Icono nombre="foco" />
-            </button>
-            <button
-              type="button"
-              className="boton boton--desnudo"
-              aria-pressed={panel === "exportar"}
-              onClick={() => setPanel(panel === "exportar" ? "ninguno" : "exportar")}
-              title="Exportar"
-            >
-              <Icono nombre="descargar" />
-            </button>
-            <button
-              type="button"
-              className="boton boton--desnudo"
-              aria-pressed={panel === "diseno"}
-              onClick={() => setPanel(panel === "diseno" ? "ninguno" : "diseno")}
-              title="Diseño del libro"
-            >
-              <Icono nombre="ajustes" />
-            </button>
-            <button
-              type="button"
-              className="boton boton--desnudo"
-              onClick={() => setPantallaCompleta(true)}
-              title="Solo el texto (Esc para salir)"
-            >
-              <Icono nombre="expandir" />
-            </button>
           </div>
+
+          <GrupoBarra>
+            {demo && (
+              <button type="button" className="boton boton--principal" onClick={onEntrar}>
+                Entrar para escribir
+              </button>
+            )}
+            <MenuBarra etiqueta="Escribir" icono="lapiz" acciones={accionesEscribir} />
+            <MenuBarra etiqueta="Ver" icono="ojo" acciones={accionesVer} />
+            <BotonBarra
+              nombre="Diseño"
+              icono="ajustes"
+              puesto={panel === "diseno"}
+              onClick={() => setPanel(panel === "diseno" ? "ninguno" : "diseno")}
+            />
+            <BotonBarra
+              nombre="Exportar"
+              icono="descargar"
+              soloIcono
+              puesto={panel === "exportar"}
+              onClick={() => setPanel(panel === "exportar" ? "ninguno" : "exportar")}
+            />
+          </GrupoBarra>
         </div>
       )}
 
-      <div className={`cuerpo cuerpo--${ajustes.previa === "lado" ? "lado" : "abajo"}`}>
+      {ajustes.sitioGadgets === "arriba" && gadgets}
+
+      <div className={`cuerpo cuerpo--${alLado ? "lado" : "abajo"}`}>
         {ajustes.capitulos && !pantallaCompleta && (
           <ListaCapitulos
             capitulos={capitulos}
-            aqui={capituloActual}
-            onIr={(capitulo) => {
-              aplicar({ texto: cuerpo, desde: capitulo.desde, hasta: capitulo.desde });
-            }}
+            aqui={indiceCapitulo}
+            onIr={(cap) => aplicar({ texto: cuerpo, desde: cap.desde, hasta: cap.desde })}
             onNuevo={() => aplicar(nuevoCapitulo(cuerpo, area.current?.selectionStart ?? 0))}
             onCerrar={() => onAjustes({ ...ajustes, capitulos: false })}
+          />
+        )}
+
+        {previaVisible && ajustes.previa === "izquierda" && (
+          <Previa
+            meta={meta}
+            cuerpo={cuerpo}
+            ajustes={ajustes}
+            pagina={pagina}
+            paginas={paginas}
+            cursor={cursor}
+            alto={altoPagina}
+            onPaginas={setPaginas}
+            onPagina={setPagina}
+            onArrastrar={arrastrar}
+            lado="izquierda"
           />
         )}
 
@@ -555,12 +574,7 @@ export function Taller({
           <div className="manuscrito__caja" style={{ maxWidth: `${ajustes.anchoEditor}ch` }}>
             <div className="manuscrito__pila">
               {resaltado && (
-                <Resaltado
-                  valor={cuerpo}
-                  cursor={cursor}
-                  foco={ajustes.foco}
-                  estilo={tipoEditor}
-                />
+                <Resaltado valor={cuerpo} cursor={cursor} foco={ajustes.foco} estilo={tipoEditor} />
               )}
               <textarea
                 ref={area}
@@ -570,9 +584,7 @@ export function Taller({
                 lang="es"
                 placeholder="Empieza por la primera frase. Lo demás viene detrás."
                 style={tipoEditor}
-                onChange={(evento) =>
-                  alEscribir(evento.target.value, evento.target.selectionStart)
-                }
+                onChange={(evento) => alEscribir(evento.target.value, evento.target.selectionStart)}
                 onKeyDown={alTeclear}
                 onSelect={(evento) => setCursor(evento.currentTarget.selectionStart)}
                 onClick={(evento) => setCursor(evento.currentTarget.selectionStart)}
@@ -581,42 +593,20 @@ export function Taller({
           </div>
         </div>
 
-        {previaVisible && (
-          <>
-            <div
-              className="tirador"
-              onPointerDown={arrastrar}
-              role="separator"
-              aria-orientation={ajustes.previa === "lado" ? "vertical" : "horizontal"}
-            />
-            <div
-              className="previa"
-              style={
-                ajustes.previa === "lado"
-                  ? { width: ajustes.previaTamano }
-                  : { height: ajustes.previaTamano }
-              }
-            >
-              <div className="previa__barra">
-                <span>
-                  Página {pagina} de {paginas}
-                </span>
-                <span className="barra__hueco" />
-                <span>{meta.diseno.pagina === "personalizada" ? "a medida" : meta.diseno.pagina}</span>
-              </div>
-              <div className="previa__lienzo">
-                <Galera
-                  meta={meta}
-                  cuerpo={cuerpo}
-                  alto={Math.max(120, altoPagina - 70)}
-                  pagina={pagina}
-                  onPaginas={setPaginas}
-                  seguirA={cursor}
-                  onPaginaDeCursor={setPagina}
-                />
-              </div>
-            </div>
-          </>
+        {previaVisible && ajustes.previa !== "izquierda" && (
+          <Previa
+            meta={meta}
+            cuerpo={cuerpo}
+            ajustes={ajustes}
+            pagina={pagina}
+            paginas={paginas}
+            cursor={cursor}
+            alto={altoPagina}
+            onPaginas={setPaginas}
+            onPagina={setPagina}
+            onArrastrar={arrastrar}
+            lado={ajustes.previa === "abajo" ? "abajo" : "derecha"}
+          />
         )}
 
         {panel === "diseno" && (
@@ -632,22 +622,18 @@ export function Taller({
         )}
 
         {panel === "exportar" && (
-          <Exportar
-            meta={meta}
-            cuerpo={cuerpo}
-            slug={slug}
-            onCerrar={() => setPanel("ninguno")}
-          />
+          <Exportar meta={meta} cuerpo={cuerpo} slug={slug} onCerrar={() => setPanel("ninguno")} />
         )}
       </div>
+
+      {ajustes.sitioGadgets === "abajo" && gadgets}
 
       {pantallaCompleta && (
         <button
           type="button"
-          className="boton boton--desnudo"
+          className="boton boton--desnudo salir-pantalla"
           onClick={() => setPantallaCompleta(false)}
           title="Salir de pantalla completa (Esc)"
-          style={{ position: "fixed", top: "0.75rem", right: "0.75rem", zIndex: 30 }}
         >
           <Icono nombre="encoger" />
         </button>
@@ -655,6 +641,142 @@ export function Taller({
 
       {leyendo && <Lector meta={meta} cuerpo={cuerpo} onCerrar={() => setLeyendo(false)} />}
     </div>
+  );
+}
+
+/**
+ * La página compuesta, al lado o debajo.
+ *
+ * Se saca a su propio componente porque va en dos sitios del árbol —antes o
+ * después del manuscrito según de qué lado esté— y duplicarla habría sido
+ * duplicar también el tirador y el cálculo del alto.
+ */
+function Previa({
+  meta,
+  cuerpo,
+  ajustes,
+  pagina,
+  paginas,
+  cursor,
+  alto,
+  onPaginas,
+  onPagina,
+  onArrastrar,
+  lado,
+}: {
+  meta: Meta;
+  cuerpo: string;
+  ajustes: Ajustes;
+  pagina: number;
+  paginas: number;
+  cursor: number;
+  alto: number | undefined;
+  onPaginas: (total: number) => void;
+  onPagina: (pagina: number) => void;
+  onArrastrar: (evento: ReactPointerEvent) => void;
+  lado: "derecha" | "izquierda" | "abajo";
+}) {
+  const caja = useRef<HTMLDivElement>(null);
+  const [hueco, setHueco] = useState({ ancho: 380, alto: 520 });
+
+  /* Se mide el hueco en vez de calcularlo: la barra de gadgets aparece y
+     desaparece bajo los pies, y el tirador cambia el ancho a voluntad. */
+  useLayoutEffect(() => {
+    const nodo = caja.current;
+    if (!nodo) {
+      return;
+    }
+    const medir = () =>
+      setHueco({
+        ancho: Math.max(160, nodo.clientWidth - 32),
+        alto: Math.max(200, nodo.clientHeight - 32),
+      });
+    medir();
+    const observador = new ResizeObserver(medir);
+    observador.observe(nodo);
+    return () => observador.disconnect();
+  }, []);
+
+  /*
+   * La página se limita por ALTO Y POR ANCHO, no solo por alto.
+   *
+   * Escalando solo por el alto disponible, un A5 en un panel de 420 px salía de
+   * 449 px de ancho y se comía el borde. La proporción del papel dice cuánto
+   * alto cabe en el ancho que hay, y se coge el menor de los dos.
+   */
+  const mm = medidaMm(meta.diseno);
+  const altoQueCabeDeAncho = (hueco.ancho * mm.alto) / mm.ancho;
+  const altoPagina =
+    lado === "abajo"
+      ? Math.min(Math.max(160, (alto ?? 300) - 74), altoQueCabeDeAncho)
+      : Math.min(hueco.alto, altoQueCabeDeAncho);
+
+  /* El tirador va SIEMPRE entre la página y el texto: a la derecha va delante
+     de la página, a la izquierda detrás. Ponerlo siempre en el mismo sitio lo
+     dejaba pegado al borde de la ventana, donde no separa nada. */
+  const tirador = (
+    <div
+      className={`tirador${lado === "abajo" ? "" : " tirador--vertical"}`}
+      onPointerDown={onArrastrar}
+      role="separator"
+      aria-orientation={lado === "abajo" ? "horizontal" : "vertical"}
+      aria-label="Cambiar el tamaño de la página"
+    />
+  );
+
+  return (
+    <>
+      {lado !== "izquierda" && tirador}
+      <div
+        className={`previa previa--${lado}`}
+        style={
+          lado === "abajo"
+            ? { height: ajustes.previaTamano }
+            : { width: ajustes.previaTamano }
+        }
+      >
+        <div className="previa__barra">
+          <span>
+            Página {pagina} de {paginas}
+          </span>
+          <span className="barra__hueco" />
+          <div className="previa__pasos">
+            <button
+              type="button"
+              className="boton boton--desnudo"
+              onClick={() => onPagina(Math.max(1, pagina - 1))}
+              disabled={pagina <= 1}
+              aria-label="Página anterior"
+            >
+              <span style={{ transform: "rotate(180deg)", display: "inline-flex" }}>
+                <Icono nombre="flecha" tamano={13} />
+              </span>
+            </button>
+            <button
+              type="button"
+              className="boton boton--desnudo"
+              onClick={() => onPagina(Math.min(paginas, pagina + 1))}
+              disabled={pagina >= paginas}
+              aria-label="Página siguiente"
+            >
+              <Icono nombre="flecha" tamano={13} />
+            </button>
+          </div>
+        </div>
+        <div className="previa__lienzo" ref={caja}>
+          <Galera
+            meta={meta}
+            cuerpo={cuerpo}
+            alto={altoPagina}
+            pagina={pagina}
+            onPaginas={onPaginas}
+            seguirA={cursor}
+            onPaginaDeCursor={onPagina}
+          />
+        </div>
+      </div>
+      {lado === "izquierda" && tirador}
+    </>
   );
 }
 
@@ -670,7 +792,7 @@ function Guardado({ estado, problema }: { estado: Estado; problema: string | nul
     return <span className="guardado">guardando…</span>;
   }
   if (estado === "escribiendo") {
-    return <span className="guardado">…</span>;
+    return <span className="guardado guardado--latiendo">escribiendo</span>;
   }
   return (
     <span className="guardado">

@@ -31,7 +31,8 @@ export type NombreIcono =
   | "sol"
   | "luna"
   | "foco"
-  | "flecha";
+  | "flecha"
+  | "panel";
 
 const TRAZOS: Record<NombreIcono, string> = {
   atras: "M15 5l-7 7 7 7",
@@ -60,6 +61,7 @@ const TRAZOS: Record<NombreIcono, string> = {
   luna: "M20 14.5A8.5 8.5 0 019.5 4a8.5 8.5 0 1010.5 10.5z",
   foco: "M12 4v3M12 17v3M4 12h3M17 12h3M12 9.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5z",
   flecha: "M5 12h14M13 6l6 6-6 6",
+  panel: "M3 5h18v14H3zM3 15h18",
 };
 
 export function Icono({

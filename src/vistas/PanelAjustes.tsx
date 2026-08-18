@@ -10,7 +10,13 @@
  */
 
 import { useEffect, useState } from "react";
-import { AJUSTES_POR_DEFECTO, type Ajustes, type Tema } from "@/datos/ajustes";
+import {
+  AJUSTES_POR_DEFECTO,
+  GADGETS,
+  type Ajustes,
+  type SitioGadgets,
+  type Tema,
+} from "@/datos/ajustes";
 import { guardarClave, leerClave } from "@/datos/clave";
 import { comprobarNube, olvidarToken, SITIO_NUBE, type EstadoNube } from "@/datos/nube";
 import { direccionGuardada, guardarDireccion, listarEnServidor, olvidarTunel } from "@/datos/servidor";
@@ -225,23 +231,33 @@ export function PanelAjustes({
 
       <div className="grupo">
         <span className="grupo__titulo">Cómo se ve mientras escribes</span>
-        <label className="campo">
+        <div className="campo">
           <span className="campo__etiqueta">Letra del editor</span>
-          <select
-            className="selector"
-            value={ajustes.fuenteEditor}
-            onChange={(evento) => onAjustes({ ...ajustes, fuenteEditor: evento.target.value })}
-          >
-            {FUENTES.map((fuente) => (
-              <option key={fuente.key} value={fuente.key}>
-                {fuente.name}
-              </option>
-            ))}
-          </select>
           <span className="campo__nota">
-            Solo para escribir. La letra del libro se elige en el panel de diseño.
+            Cada nombre está escrito con su propia letra, para que sepas cómo es antes de elegirla.
+            Solo afecta a escribir: la letra del libro se elige en el panel de diseño.
           </span>
-        </label>
+          <div className="fuentes fuentes--corta">
+            {FUENTES.map((fuente) => (
+              <button
+                key={fuente.key}
+                type="button"
+                className={`fuente${ajustes.fuenteEditor === fuente.key ? " fuente--aqui" : ""}`}
+                onClick={() => onAjustes({ ...ajustes, fuenteEditor: fuente.key })}
+              >
+                <span className="fuente__muestra" style={{ fontFamily: fuente.stack }}>
+                  {fuente.name}
+                </span>
+                <span className="fuente__nombre">{fuente.hint}</span>
+                {ajustes.fuenteEditor === fuente.key && (
+                  <span className="fuente__marca">
+                    <Icono nombre="guardado" tamano={13} />
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <Rango
           etiqueta="Tamaño"
@@ -304,6 +320,59 @@ export function PanelAjustes({
             onChange={(evento) => onAjustes({ ...ajustes, avisarSalida: evento.target.checked })}
           />
         </label>
+      </div>
+
+      <div className="grupo">
+        <span className="grupo__titulo">Gadgets del taller</span>
+        <p className="campo__nota">
+          Lo que se ve en la franja de arriba o de abajo mientras escribes. Enciende los que te
+          sirvan y apaga los que te distraigan: no hay una respuesta buena para todo el mundo.
+        </p>
+        <div className="campo">
+          <span className="campo__etiqueta">Dónde va la franja</span>
+          <div className="segmentado">
+            {(
+              [
+                ["abajo", "Abajo"],
+                ["arriba", "Arriba"],
+                ["oculta", "Sin franja"],
+              ] as [SitioGadgets, string][]
+            ).map(([valor, texto]) => (
+              <button
+                key={valor}
+                type="button"
+                className={`segmentado__opcion${
+                  ajustes.sitioGadgets === valor ? " segmentado__opcion--aqui" : ""
+                }`}
+                onClick={() => onAjustes({ ...ajustes, sitioGadgets: valor })}
+              >
+                {texto}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {ajustes.sitioGadgets !== "oculta" &&
+          GADGETS.map((gadget) => (
+            <label key={gadget.clave} className="interruptor">
+              <span className="interruptor__texto">
+                <span>{gadget.nombre}</span>
+                <span className="campo__nota">{gadget.que}</span>
+              </span>
+              <input
+                type="checkbox"
+                checked={ajustes.gadgets.includes(gadget.clave)}
+                onChange={(evento) =>
+                  onAjustes({
+                    ...ajustes,
+                    gadgets: evento.target.checked
+                      ? [...ajustes.gadgets, gadget.clave]
+                      : ajustes.gadgets.filter((clave) => clave !== gadget.clave),
+                  })
+                }
+              />
+            </label>
+          ))}
       </div>
 
       {rescates.length > 0 && (

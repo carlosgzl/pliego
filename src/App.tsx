@@ -28,7 +28,7 @@ import { alCambiarSesion, hayEntrado, revisarSesion, salir } from "@/datos/sesio
 import { aplicarAcento } from "@/ui/acento";
 import { avisar, Avisos } from "@/ui/Avisos";
 import { Entrada } from "@/vistas/Entrada";
-import { Estanteria } from "@/vistas/Estanteria";
+import { Inicio } from "@/vistas/Inicio";
 import { PanelAjustes } from "@/vistas/PanelAjustes";
 import { Taller } from "@/vistas/Taller";
 
@@ -44,7 +44,10 @@ export function App() {
   const [cargando, setCargando] = useState(true);
   const [ajustando, setAjustando] = useState(false);
   const [dentro, setDentro] = useState(hayEntrado);
-  const [pidiendoEntrada, setPidiendoEntrada] = useState(false);
+  /* La puerta es lo PRIMERO que se ve. Quien pulsa «solo mirar» pasa como
+     visita y se le da el libro de muestra; quien recarga la página vuelve a
+     ver la puerta, que es lo que debe hacer una puerta. */
+  const [visita, setVisita] = useState(false);
 
   /* ── Theme and accent ────────────────────────────────────────────────────── */
 
@@ -143,7 +146,7 @@ export function App() {
 
   const conSesion = (accion: () => void) => {
     if (!dentro) {
-      setPidiendoEntrada(true);
+      setVisita(false); // devuelve a la puerta: lo que iba a hacer necesita cuenta
       return;
     }
     accion();
@@ -184,6 +187,17 @@ export function App() {
 
   const enMuestra = abierto === SLUG_MUESTRA || (!dentro && abierto !== null);
 
+  /* Sin sesión y sin haber pedido pasar de visita, lo único que hay es la
+     puerta. Ni estantería, ni libro, ni una petición a la red. */
+  if (!dentro && !visita) {
+    return (
+      <div className="app">
+        <Entrada onEntrado={() => setDentro(true)} onVisita={() => setVisita(true)} />
+        <Avisos />
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       {abierto ? (
@@ -194,11 +208,14 @@ export function App() {
           ajustes={ajustes}
           onAjustes={cambiarAjustes}
           onSalir={salirDelTaller}
-          onEntrar={() => setPidiendoEntrada(true)}
+          onEntrar={() => {
+            abrir(null);
+            setVisita(false);
+          }}
         />
       ) : (
         <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
-          <Estanteria
+          <Inicio
             catalogo={catalogo}
             cargando={cargando}
             dentro={dentro}
@@ -209,9 +226,10 @@ export function App() {
             onBorrar={(slug) => conSesion(() => void borrar(slug))}
             onAjustes={() => setAjustando(true)}
             onRecargar={() => void recargar()}
-            onEntrar={() => setPidiendoEntrada(true)}
+            onEntrar={() => setVisita(false)}
             onSalir={() => {
               salir();
+              setVisita(false);
               avisar("Sesión cerrada.");
             }}
           />
@@ -226,17 +244,6 @@ export function App() {
           )}
         </div>
       )}
-
-      {pidiendoEntrada && (
-        <Entrada
-          onEntrado={() => {
-            setPidiendoEntrada(false);
-            setDentro(true);
-          }}
-          onCerrar={() => setPidiendoEntrada(false)}
-        />
-      )}
-
       <Avisos />
     </div>
   );
