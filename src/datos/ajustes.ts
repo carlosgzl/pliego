@@ -9,6 +9,8 @@
  * a desktop.
  */
 
+import type { Sonido } from "@/ui/sonido";
+
 const ALMACEN = "pliego.ajustes";
 
 export type Tema = "claro" | "oscuro" | "sepia" | "sistema";
@@ -37,11 +39,15 @@ export type SitioGadgets = "arriba" | "abajo" | "oculta";
  */
 export const GADGETS = [
   { clave: "palabras", nombre: "Palabras", que: "Cuántas lleva el libro" },
+  { clave: "caracteres", nombre: "Caracteres", que: "Las letras contadas, con y sin espacios" },
   { clave: "hoy", nombre: "Escrito hoy", que: "Cuántas has sumado desde esta mañana" },
   { clave: "meta", nombre: "Objetivo", que: "Lo que te falta para la meta del libro" },
+  { clave: "ritmo", nombre: "Ritmo", que: "Palabras por minuto en esta sesión" },
   { clave: "sesion", nombre: "Sesión", que: "Cuánto llevas escribiendo de una sentada" },
   { clave: "paginas", nombre: "Páginas", que: "En qué página vas y cuántas hay" },
   { clave: "capitulo", nombre: "Capítulo", que: "En cuál estás y cuánto tiene" },
+  { clave: "capitulos", nombre: "Capítulos", que: "Cuántos tiene el libro y cuántas escenas" },
+  { clave: "parrafos", nombre: "Párrafos", que: "Cuántos van, para medir el pulso del texto" },
   { clave: "lectura", nombre: "Tiempo de lectura", que: "Lo que se tarda en leerlo" },
   { clave: "reloj", nombre: "Hora", que: "La hora, para no mirar el móvil" },
 ] as const;
@@ -83,6 +89,10 @@ export interface Ajustes {
   corrector: boolean;
   /** Warn before leaving with unsaved text. */
   avisarSalida: boolean;
+  /** Cómo suena cada tecla. Ver `ui/sonido.ts`. */
+  sonido: Sonido;
+  /** De 0 a 1. A cero es como estar en «ninguno». */
+  volumenSonido: number;
   /**
    * Modo escritura: la pantalla se queda casi vacía.
    *
@@ -114,6 +124,8 @@ export const AJUSTES_POR_DEFECTO: Ajustes = {
   tipografia: true,
   corrector: true,
   avisarSalida: true,
+  sonido: "ninguno",
+  volumenSonido: 0.6,
   escritura: false,
 };
 

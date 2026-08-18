@@ -38,6 +38,7 @@ import {
 import {
   bloqueEnPosicion,
   capitulosDe,
+  contarCaracteres,
   contarPalabras,
   partirEnBloques,
 } from "@/nucleo/bloques";
@@ -57,6 +58,7 @@ import { guardarLibro, leerLibro, type ResultadoGuardado } from "@/datos/bibliot
 import { ficheroDeMuestra } from "@/datos/muestra";
 import { marcarArranque, palabrasDeHoy, type Ajustes, type SitioPrevia } from "@/datos/ajustes";
 import { avisar } from "@/ui/Avisos";
+import { sonarTecla } from "@/ui/sonido";
 import { Icono } from "@/ui/Icono";
 import { BotonBarra, GrupoBarra, MenuBarra, type Accion } from "./BarraTaller";
 import { BarraGadgets } from "./Gadgets";
@@ -264,6 +266,26 @@ export function Taller({
   const alTeclear = (evento: ReactKeyboardEvent<HTMLTextAreaElement>) => {
     const nodo = evento.currentTarget;
     const mando = evento.ctrlKey || evento.metaKey;
+
+    /*
+     * El golpe de la tecla.
+     *
+     * Va en `keydown` y no en el cambio de texto porque aquí se sabe QUÉ tecla
+     * es: el retorno y el espacio suenan más fuerte, como en una máquina de
+     * verdad. Se descartan las teclas que no escriben nada —Shift, las flechas,
+     * Alt— porque un teclado tampoco suena cuando mueves el cursor.
+     */
+    if (ajustes.sonido !== "ninguno" && !mando && !evento.altKey) {
+      const escribe = evento.key.length === 1;
+      const especial = evento.key === "Enter" || evento.key === "Backspace" || evento.key === "Tab";
+      if (escribe || especial) {
+        sonarTecla(
+          ajustes.sonido,
+          ajustes.volumenSonido,
+          evento.key === "Enter" ? 1.5 : evento.key === " " ? 1.2 : 1,
+        );
+      }
+    }
 
     if (mando) {
       const tecla = evento.key.toLowerCase();
@@ -503,6 +525,10 @@ export function Taller({
 
   const datosGadgets = {
     palabras,
+    caracteres: contarCaracteres(cuerpo),
+    parrafos: bloques.filter((bloque) => bloque.nivel === 0).length,
+    capitulos: capitulos.length,
+    escenas: bloques.filter((bloque) => bloque.nivel === -1).length,
     hoy,
     meta: meta.meta ?? 0,
     pagina,

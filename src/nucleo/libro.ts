@@ -73,8 +73,24 @@ export interface Portada {
   imagen: string | null;
   encaje: "cubrir" | "contener";
   colocacion: "completa" | "arriba" | "abajo" | "ventana";
-  /** Cover lettering: the body face, or a display face of its own. */
+  /**
+   * La letra de la portada, cuando las tres líneas van con la misma.
+   *
+   * Sigue siendo el valor por defecto y el que leen las versiones antiguas: los
+   * tres campos de abajo son opcionales y caen aquí cuando faltan, así que un
+   * libro escrito antes de que existieran se compone exactamente igual.
+   */
   fuente: string;
+  /**
+   * Y las tres por separado, para poder combinarlas.
+   *
+   * UNA PORTADA DE VERDAD CASI NUNCA VA CON UNA SOLA LETRA: el título en una
+   * romana de mucho contraste y el autor en una sans en versalitas es media
+   * historia del diseño editorial. Vacío significa «la de arriba».
+   */
+  fuenteTitulo?: string;
+  fuenteSub?: string;
+  fuenteAutor?: string;
 }
 
 export interface Meta {

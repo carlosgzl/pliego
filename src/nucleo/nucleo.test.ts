@@ -86,6 +86,38 @@ describe("el archivo del libro", () => {
     expect(cuerpo).toBe("Solo prosa, sin nada delante.");
   });
 
+  it("guarda las tres letras de la portada y las recupera", () => {
+    const meta = metaPorDefecto("Combinada");
+    meta.portada.fuente = "garamond";
+    meta.portada.fuenteTitulo = "elegante";
+    meta.portada.fuenteSub = "moderna";
+    meta.portada.fuenteAutor = "grotesca";
+
+    const vuelta = descomponer(componer(meta, "")).meta.portada;
+
+    expect(vuelta.fuenteTitulo).toBe("elegante");
+    expect(vuelta.fuenteSub).toBe("moderna");
+    expect(vuelta.fuenteAutor).toBe("grotesca");
+  });
+
+  it("un libro sin las tres letras cae en la general, no en blanco", () => {
+    // Una portada escrita antes de que existieran los tres campos.
+    const viejo = [
+      "---",
+      "titulo: De antes",
+      'portada: {"diseno":"sello","color":"#111","fuente":"caslon"}',
+      "---",
+      "",
+      "Texto.",
+    ].join("\n");
+
+    const { portada } = descomponer(viejo).meta;
+
+    expect(portada.fuente).toBe("caslon");
+    expect(portada.fuenteTitulo).toBeUndefined();
+    expect(portada.fuenteSub).toBeUndefined();
+  });
+
   it("no escribe la pila de fuentes en el disco (es derivada)", () => {
     const salida = componer(metaPorDefecto("X"), "");
     expect(salida).not.toContain("fuentePila");

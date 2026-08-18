@@ -330,6 +330,7 @@
 }
 
 .portada__titulo {
+  font-family: var(--portada-fuente-titulo, var(--portada-fuente));
   font-size: 1.55em;
   font-weight: 600;
   line-height: 1.12;
@@ -337,12 +338,14 @@
 }
 
 .portada__sub {
+  font-family: var(--portada-fuente-sub, var(--portada-fuente));
   font-size: 0.78em;
   opacity: 0.82;
   font-style: italic;
 }
 
 .portada__autor {
+  font-family: var(--portada-fuente-autor, var(--portada-fuente));
   font-size: 0.7em;
   letter-spacing: 0.16em;
   text-transform: uppercase;

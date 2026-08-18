@@ -17,6 +17,10 @@ import { minutosDeLectura } from "@/nucleo/bloques";
 
 export interface DatosGadgets {
   palabras: number;
+  caracteres: number;
+  parrafos: number;
+  capitulos: number;
+  escenas: number;
   hoy: number;
   meta: number;
   pagina: number;
@@ -72,7 +76,7 @@ function usarContenido(
   /* El reloj y el cronómetro son los dos únicos que cambian solos, así que son
      los dos únicos que necesitan un latido. Uno por barra, no uno por gadget. */
   const [ahora, setAhora] = useState(() => Date.now());
-  const vivo = clave === "reloj" || clave === "sesion";
+  const vivo = clave === "reloj" || clave === "sesion" || clave === "ritmo";
 
   useEffect(() => {
     if (!vivo) {
@@ -114,6 +118,29 @@ function usarContenido(
         cifra: horas > 0 ? `${horas} h ${minutos % 60}′` : `${minutos}′`,
         nombre: "de sesión",
       };
+    }
+
+    case "caracteres":
+      return { cifra: numero(datos.caracteres), nombre: "caracteres" };
+
+    case "parrafos":
+      return { cifra: numero(datos.parrafos), nombre: datos.parrafos === 1 ? "párrafo" : "párrafos" };
+
+    case "capitulos":
+      return {
+        cifra: `${datos.capitulos} · ${datos.escenas}`,
+        nombre: "capítulos y escenas",
+      };
+
+    case "ritmo": {
+      /* Palabras por minuto DE ESTA SESIÓN, no de siempre. El primer medio
+         minuto no se enseña: dividir entre casi cero da cifras absurdas que
+         solo sirven para desanimar. */
+      const minutos = (ahora - datos.desde) / 60000;
+      if (minutos < 0.5 || datos.hoy <= 0) {
+        return { cifra: "—", nombre: "palabras/min" };
+      }
+      return { cifra: String(Math.round(datos.hoy / minutos)), nombre: "palabras/min" };
     }
 
     case "paginas":

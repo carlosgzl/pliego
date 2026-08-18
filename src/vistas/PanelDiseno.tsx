@@ -685,6 +685,58 @@ const TINTAS = [
   "#d9d3c7",
 ];
 
+/**
+ * Parejas que funcionan, y por qué.
+ *
+ * No son combinaciones al azar: cada una es un contraste que el ojo lee como
+ * intencionado. Lo que NUNCA se junta son dos letras parecidas — dos romanas de
+ * la misma época en la misma portada no parecen una elección, parecen un error.
+ */
+const PAREJAS: { nombre: string; que: string; titulo: string; sub: string; autor: string }[] = [
+  {
+    nombre: "Novela clásica",
+    que: "Garamond arriba, sans abajo",
+    titulo: "garamond",
+    sub: "garamond",
+    autor: "grotesca",
+  },
+  {
+    nombre: "Editorial",
+    que: "Didona y una seca",
+    titulo: "elegante",
+    sub: "moderna",
+    autor: "moderna",
+  },
+  {
+    nombre: "Ensayo",
+    que: "Cambria con Cándida",
+    titulo: "minion",
+    sub: "candida",
+    autor: "candida",
+  },
+  {
+    nombre: "Histórica",
+    que: "Antigua y Caslon",
+    titulo: "hoefler",
+    sub: "caslon",
+    autor: "caslon",
+  },
+  {
+    nombre: "Contemporánea",
+    que: "Todo de palo, en dos pesos",
+    titulo: "grotesca",
+    sub: "grotesca",
+    autor: "corondel",
+  },
+  {
+    nombre: "Manuscrito",
+    que: "Courier y Baskerville",
+    titulo: "remington",
+    sub: "pluma",
+    autor: "pluma",
+  },
+];
+
 const ESTILOS_PORTADA: [TipoPortada["diseno"], string, string][] = [
   ["sello", "Sello", "Una raya sobre el título"],
   ["franja", "Franja", "Una banda más oscura detrás"],
@@ -753,12 +805,76 @@ function PortadaAjustes({
       </div>
 
       <div className="grupo">
-        <span className="grupo__titulo">La letra de la portada</span>
+        <span className="grupo__titulo">Las letras de la portada</span>
+        <p className="campo__nota">
+          Una portada de verdad casi nunca lleva una sola letra: el título en una romana de mucho
+          contraste y el autor en versalitas de palo es media historia del diseño de libros. Empieza
+          por una pareja hecha y cambia lo que quieras.
+        </p>
+        <div className="recetas">
+          {PAREJAS.map((pareja) => (
+            <button
+              key={pareja.nombre}
+              type="button"
+              className="receta"
+              onClick={() =>
+                onCambiarPortada({
+                  fuente: pareja.titulo,
+                  fuenteTitulo: pareja.titulo,
+                  fuenteSub: pareja.sub,
+                  fuenteAutor: pareja.autor,
+                })
+              }
+            >
+              <span className="receta__nombre" style={{ fontFamily: pilaDe(pareja.titulo) }}>
+                {pareja.nombre}
+              </span>
+              <span className="receta__que" style={{ fontFamily: pilaDe(pareja.autor) }}>
+                {pareja.que}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grupo">
+        <span className="grupo__titulo">El título</span>
         <ListaFuentes
           fuentes={FUENTES}
-          valor={portada.fuente}
-          onCambiar={(fuente) => onCambiarPortada({ fuente })}
+          valor={portada.fuenteTitulo || portada.fuente}
+          onCambiar={(fuenteTitulo) => onCambiarPortada({ fuenteTitulo })}
         />
+      </div>
+
+      <div className="grupo">
+        <span className="grupo__titulo">El subtítulo</span>
+        <ListaFuentes
+          fuentes={FUENTES}
+          valor={portada.fuenteSub || portada.fuente}
+          onCambiar={(fuenteSub) => onCambiarPortada({ fuenteSub })}
+        />
+      </div>
+
+      <div className="grupo">
+        <span className="grupo__titulo">Tu nombre</span>
+        <ListaFuentes
+          fuentes={FUENTES}
+          valor={portada.fuenteAutor || portada.fuente}
+          onCambiar={(fuenteAutor) => onCambiarPortada({ fuenteAutor })}
+        />
+        <button
+          type="button"
+          className="boton"
+          onClick={() =>
+            onCambiarPortada({
+              fuenteTitulo: portada.fuente,
+              fuenteSub: portada.fuente,
+              fuenteAutor: portada.fuente,
+            })
+          }
+        >
+          Igualar las tres
+        </button>
       </div>
 
       <div className="grupo">

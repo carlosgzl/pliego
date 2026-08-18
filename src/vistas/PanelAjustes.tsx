@@ -25,6 +25,7 @@ import { leerRescates, olvidarRescate } from "@/datos/biblioteca";
 import { avisar } from "@/ui/Avisos";
 import { ACENTOS } from "@/ui/acento";
 import { Icono } from "@/ui/Icono";
+import { probarSonido, SONIDOS, type Sonido } from "@/ui/sonido";
 import { useSalida } from "@/ui/useSalida";
 
 export function PanelAjustes({
@@ -343,6 +344,51 @@ export function PanelAjustes({
             onChange={(evento) => onAjustes({ ...ajustes, avisarSalida: evento.target.checked })}
           />
         </label>
+      </div>
+
+      <div className="grupo">
+        <span className="grupo__titulo">Cómo suena al escribir</span>
+        <p className="campo__nota">
+          Cada tecla se sintetiza en el momento, así que no suenan dos iguales y no descarga ni un
+          archivo. Elige uno y pruébalo escribiendo.
+        </p>
+        <div className="opciones">
+          {SONIDOS.map((son) => (
+            <button
+              key={son.clave}
+              type="button"
+              className={`opcion${ajustes.sonido === son.clave ? " opcion--aqui" : ""}`}
+              onClick={() => {
+                onAjustes({ ...ajustes, sonido: son.clave as Sonido });
+                probarSonido(son.clave as Sonido, ajustes.volumenSonido);
+              }}
+            >
+              <span className="opcion__nombre">{son.nombre}</span>
+              <span className="opcion__que">{son.que}</span>
+            </button>
+          ))}
+        </div>
+        {ajustes.sonido !== "ninguno" && (
+          <label className="campo">
+            <span className="campo__etiqueta">
+              Volumen
+              <span className="campo__valor">{Math.round(ajustes.volumenSonido * 100)}%</span>
+            </span>
+            <input
+              className="deslizador"
+              type="range"
+              min={0.1}
+              max={1}
+              step={0.05}
+              value={ajustes.volumenSonido}
+              onChange={(evento) => {
+                const volumenSonido = Number.parseFloat(evento.target.value);
+                onAjustes({ ...ajustes, volumenSonido });
+                probarSonido(ajustes.sonido, volumenSonido);
+              }}
+            />
+          </label>
+        )}
       </div>
 
       <div className="grupo">

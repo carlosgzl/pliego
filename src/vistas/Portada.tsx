@@ -17,10 +17,15 @@ import type { Meta } from "@/nucleo/libro";
 
 export function Portada({ meta, tamano }: { meta: Meta; tamano: "mini" | "grande" }) {
   const { portada } = meta;
+  /* Cada línea con la suya, cayendo en la general cuando no se ha elegido. Así
+     un libro de antes de que esto existiera se compone igual que siempre. */
   const estilo = {
     "--portada-color": portada.color,
     "--portada-tinta": portada.tinta,
     "--portada-fuente": pilaDe(portada.fuente),
+    "--portada-fuente-titulo": pilaDe(portada.fuenteTitulo || portada.fuente),
+    "--portada-fuente-sub": pilaDe(portada.fuenteSub || portada.fuente),
+    "--portada-fuente-autor": pilaDe(portada.fuenteAutor || portada.fuente),
     "--portada-encaje": portada.encaje === "contener" ? "contain" : "cover",
   } as CSSProperties;
 
