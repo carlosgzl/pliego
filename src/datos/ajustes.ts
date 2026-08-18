@@ -83,6 +83,16 @@ export interface Ajustes {
   corrector: boolean;
   /** Warn before leaving with unsaved text. */
   avisarSalida: boolean;
+  /**
+   * Modo escritura: la pantalla se queda casi vacía.
+   *
+   * No es lo mismo que «pantalla completa». Aquí no desaparece solo el marco
+   * del navegador: desaparece la aplicación. Se va la barra, se va la página
+   * compuesta, se van los gadgets y se va el índice, y queda el texto centrado
+   * sobre el fondo. La barra vuelve sola al acercar el ratón al borde de
+   * arriba, y Esc lo deshace todo.
+   */
+  escritura: boolean;
 }
 
 export const AJUSTES_POR_DEFECTO: Ajustes = {
@@ -104,6 +114,7 @@ export const AJUSTES_POR_DEFECTO: Ajustes = {
   tipografia: true,
   corrector: true,
   avisarSalida: true,
+  escritura: false,
 };
 
 export function leerAjustes(): Ajustes {

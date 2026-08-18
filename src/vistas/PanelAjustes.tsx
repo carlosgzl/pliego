@@ -321,6 +321,21 @@ export function PanelAjustes({
         </span>
 
         <label className="interruptor">
+          <span className="interruptor__texto">
+            <span>Modo escritura</span>
+            <span className="campo__nota">
+              Esconde la barra, la página compuesta, los gadgets y el índice: queda tu texto y nada
+              más. La barra vuelve al acercar el ratón al borde de arriba, y Esc lo deshace.
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            checked={ajustes.escritura}
+            onChange={(evento) => onAjustes({ ...ajustes, escritura: evento.target.checked })}
+          />
+        </label>
+
+        <label className="interruptor">
           <span>Avisar si cierro con algo sin guardar</span>
           <input
             type="checkbox"

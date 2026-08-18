@@ -2006,3 +2006,107 @@
 .menu__lista .menu__opcion {
   width: 100%;
 }
+
+/* ── Modo escritura ───────────────────────────────────────────────────────── */
+
+/*
+ * La pantalla se queda con el texto y nada más.
+ *
+ * No es «pantalla completa»: no se esconde el marco del navegador, se esconde
+ * LA APLICACIÓN. Se van la barra, la página compuesta, los gadgets, el índice y
+ * hasta el selector de color. Queda el folio.
+ */
+.taller--escritura {
+  background: var(--ground);
+}
+
+/* La barra vuelve flotando por encima, no empujando el texto hacia abajo: si
+   empujara, el párrafo que estás escribiendo daría un salto cada vez que el
+   ratón roza el borde, que es peor que no tener barra. */
+.barra--asomada {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 40;
+  animation: bajar var(--normal) var(--sale);
+  box-shadow: 0 12px 28px -18px rgb(0 0 0 / 40%);
+}
+
+@keyframes bajar {
+  from {
+    transform: translateY(-100%);
+  }
+}
+
+/*
+ * La franja invisible del techo, que es la que trae la barra de vuelta.
+ *
+ * Ocho píxeles: bastante para que el ratón la encuentre sin buscarla, poco
+ * para que no salte mientras escribes con el cursor a media pantalla. La
+ * segunda franja, la de abajo, es la que la despide al alejarse.
+ */
+.asomadero {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  height: 8px;
+  z-index: 41;
+}
+
+.asomadero--fuera {
+  inset-block-start: 3.4rem;
+  inset-block-end: 0;
+  height: auto;
+  z-index: 39;
+}
+
+/* En modo escritura, el color flotante también sobra. */
+.taller--escritura ~ .paleta,
+.app:has(.taller--escritura) .paleta {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.taller--escritura .salir-pantalla {
+  opacity: 0.18;
+}
+
+/* ── La superficie de escribir ────────────────────────────────────────────── */
+
+/*
+ * Lo que hace que apetezca escribir aquí, que era la queja de fondo.
+ *
+ * Tres cosas, y ninguna es un adorno:
+ *
+ * 1. AIRE ARRIBA. El texto empezaba pegado a la barra. Un folio tiene margen
+ *    superior y la pantalla también debería: se entra al documento, no se
+ *    choca con él.
+ * 2. UN CURSOR QUE SE VE. El de fábrica es un pelo de un píxel que se pierde
+ *    en una serif de dieciocho puntos. Dos píxeles y del color de la casa: se
+ *    encuentra sin buscarlo.
+ * 3. LA SELECCIÓN, EN SU COLOR. El azul del sistema encima de un papel crema
+ *    canta muchísimo; con el acento de la aplicación al 22 % se integra.
+ */
+.manuscrito {
+  scroll-behavior: smooth;
+}
+
+.taller--escritura .manuscrito__caja {
+  padding-block-start: 18vh;
+}
+
+.manuscrito__area {
+  caret-color: var(--acento);
+}
+
+.manuscrito__area::selection,
+.manuscrito__espejo ::selection {
+  background: color-mix(in oklab, var(--acento) 22%, transparent);
+}
+
+/* Una línea de respiración entre párrafos: en el editor, no en el libro. El
+   libro tiene su propio criterio y no se toca desde aquí. */
+.manuscrito__area,
+.manuscrito__espejo {
+  letter-spacing: 0.002em;
+}

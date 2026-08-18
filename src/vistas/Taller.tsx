@@ -97,7 +97,13 @@ export function Taller({
   const [paginas, setPaginas] = useState(1);
   const [panel, setPanel] = useState<"ninguno" | "diseno" | "exportar">("ninguno");
   const [leyendo, setLeyendo] = useState(false);
-  const [pantallaCompleta, setPantallaCompleta] = useState(false);
+  /*
+   * El modo escritura se guarda en los ajustes, no en un estado local: quien
+   * escribe así lo quiere SIEMPRE, y volver a pulsarlo cada vez que abre un
+   * libro es exactamente el tipo de fricción que este modo viene a quitar.
+   */
+  const escribiendoSolo = ajustes.escritura;
+  const [barraAsomada, setBarraAsomada] = useState(false);
 
   const area = useRef<HTMLTextAreaElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -298,8 +304,8 @@ export function Taller({
       }
     }
 
-    if (evento.key === "Escape" && pantallaCompleta) {
-      setPantallaCompleta(false);
+    if (evento.key === "Escape" && escribiendoSolo) {
+      onAjustes({ ...ajustes, escritura: false });
     }
   };
 
@@ -377,7 +383,7 @@ export function Taller({
   }
 
   const alLado = ajustes.previa === "derecha" || ajustes.previa === "izquierda";
-  const previaVisible = ajustes.previa !== "oculta" && !pantallaCompleta;
+  const previaVisible = ajustes.previa !== "oculta" && !escribiendoSolo;
   const altoPagina = alLado ? undefined : ajustes.previaTamano;
 
   const tipoEditor = {
@@ -485,11 +491,13 @@ export function Taller({
     },
     { clave: "leer", nombre: "Leer el libro entero", icono: "libro", hacer: () => setLeyendo(true) },
     {
-      clave: "pantalla",
-      nombre: "Solo el texto",
+      clave: "escritura",
+      nombre: "Modo escritura",
       icono: "expandir",
       atajo: "Esc para salir",
-      hacer: () => setPantallaCompleta(true),
+      ayuda:
+        "Se va todo: la barra, la página compuesta, los gadgets y el índice. Queda tu texto y nada más. La barra vuelve sola si acercas el ratón al borde de arriba.",
+      hacer: () => onAjustes({ ...ajustes, escritura: true }),
     },
   ];
 
@@ -505,7 +513,7 @@ export function Taller({
   };
 
   const gadgets =
-    ajustes.sitioGadgets !== "oculta" && !pantallaCompleta ? (
+    ajustes.sitioGadgets !== "oculta" && !escribiendoSolo ? (
       <BarraGadgets
         activos={ajustes.gadgets}
         datos={datosGadgets}
@@ -514,9 +522,9 @@ export function Taller({
     ) : null;
 
   return (
-    <div className="taller pantalla pantalla--taller">
-      {!pantallaCompleta && (
-        <div className="barra">
+    <div className={`taller pantalla pantalla--taller${escribiendoSolo ? " taller--escritura" : ""}`}>
+      {(!escribiendoSolo || barraAsomada) && (
+        <div className={`barra${escribiendoSolo ? " barra--asomada" : ""}`}>
           <GrupoBarra>
             <BotonBarra nombre="Volver" icono="atras" onClick={salir} />
             <BotonBarra
@@ -557,6 +565,14 @@ export function Taller({
               puesto={panel === "exportar"}
               onClick={() => setPanel(panel === "exportar" ? "ninguno" : "exportar")}
             />
+            {/* Suelto y no dentro del menú: es el botón que más se pulsa de
+                todos, y esconderlo detrás de «Ver» sería enterrarlo. */}
+            <BotonBarra
+              nombre="Modo escritura"
+              icono="expandir"
+              soloIcono
+              onClick={() => onAjustes({ ...ajustes, escritura: true })}
+            />
           </GrupoBarra>
         </div>
       )}
@@ -564,7 +580,7 @@ export function Taller({
       {ajustes.sitioGadgets === "arriba" && gadgets}
 
       <div className={`cuerpo cuerpo--${alLado ? "lado" : "abajo"}`}>
-        {ajustes.capitulos && !pantallaCompleta && (
+        {ajustes.capitulos && !escribiendoSolo && (
           <ListaCapitulos
             capitulos={capitulos}
             aqui={indiceCapitulo}
@@ -652,15 +668,37 @@ export function Taller({
 
       {ajustes.sitioGadgets === "abajo" && gadgets}
 
-      {pantallaCompleta && (
-        <button
-          type="button"
-          className="boton boton--desnudo salir-pantalla"
-          onClick={() => setPantallaCompleta(false)}
-          title="Salir de pantalla completa (Esc)"
-        >
-          <Icono nombre="encoger" />
-        </button>
+      {escribiendoSolo && (
+        <>
+          {/*
+            * Una franja invisible pegada al techo.
+            *
+            * Es lo que hace que la barra vuelva: acercas el ratón arriba y
+            * aparece; la apartas y se va. Sin esto, el modo escritura sería una
+            * trampa — no habría forma de volver salvo adivinando que Esc sirve.
+            */}
+          <div
+            className="asomadero"
+            onPointerEnter={() => setBarraAsomada(true)}
+            aria-hidden="true"
+          />
+          {barraAsomada && (
+            <div
+              className="asomadero asomadero--fuera"
+              onPointerEnter={() => setBarraAsomada(false)}
+              aria-hidden="true"
+            />
+          )}
+          <button
+            type="button"
+            className="boton boton--desnudo salir-pantalla"
+            onClick={() => onAjustes({ ...ajustes, escritura: false })}
+            title="Salir del modo escritura (Esc)"
+            aria-label="Salir del modo escritura"
+          >
+            <Icono nombre="encoger" />
+          </button>
+        </>
       )}
 
       {leyendo && <Lector meta={meta} cuerpo={cuerpo} onCerrar={() => setLeyendo(false)} />}
