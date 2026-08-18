@@ -926,6 +926,24 @@
 /* ── Phone ────────────────────────────────────────────────────────────────── */
 
 @media (max-width: 760px) {
+  /*
+   * The bar carries eleven controls, and on a phone they do not fit on one
+   * line — the right-hand group (preview, reader, focus, export, design) simply
+   * fell off the edge with no way to reach it. Making the spacer a full-width
+   * flex item turns it into a line break: the title and the writing tools keep
+   * the first row, everything else wraps onto a second.
+   */
+  .barra {
+    flex-wrap: wrap;
+    row-gap: 0.3rem;
+    padding-bottom: 0.4rem;
+  }
+
+  .barra__hueco {
+    flex-basis: 100%;
+    height: 0;
+  }
+
   .capitulos,
   .panel {
     position: fixed;
