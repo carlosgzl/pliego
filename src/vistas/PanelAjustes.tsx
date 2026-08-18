@@ -17,15 +17,19 @@ import { direccionGuardada, guardarDireccion, listarEnServidor, olvidarTunel } f
 import { FUENTES } from "@/nucleo/fuentes";
 import { leerRescates, olvidarRescate } from "@/datos/biblioteca";
 import { avisar } from "@/ui/Avisos";
+import { ACENTOS } from "@/ui/acento";
 import { Icono } from "@/ui/Icono";
 
 export function PanelAjustes({
   ajustes,
+  dentro,
   onAjustes,
   onCerrar,
   onRecargar,
 }: {
   ajustes: Ajustes;
+  /** Somebody has signed in. The wiring section is theirs alone. */
+  dentro: boolean;
   onAjustes: (ajustes: Ajustes) => void;
   onCerrar: () => void;
   onRecargar: () => void;
@@ -58,8 +62,21 @@ export function PanelAjustes({
         </button>
       </div>
 
-      {/* ── Wiring ─────────────────────────────────────────────────────────── */}
+      {/* ── Wiring. Only for whoever has entered: a visitor has no library to
+             point anywhere, and showing them a passphrase box is an invitation
+             to try one. ─────────────────────────────────────────────────────── */}
 
+      {!dentro && (
+        <div className="grupo">
+          <span className="grupo__titulo">Estás de visita</span>
+          <p className="campo__nota">
+            Puedes cambiar el ambiente y el color, y probar el diseño con el libro de muestra. Para
+            abrir una biblioteca de verdad y guardar hay que entrar.
+          </p>
+        </div>
+      )}
+
+      {dentro && (
       <div className="grupo">
         <span className="grupo__titulo">Dónde se guardan tus libros</span>
 
@@ -71,7 +88,7 @@ export function PanelAjustes({
             </span>
           </span>
           <p className="campo__nota">
-            Cuando está encendido, Scriptorium escribe directamente los archivos .md de Drive — los
+            Cuando está encendido, Pliego escribe directamente los archivos .md de Drive — los
             mismos que abre Alexandria. Es la única forma de que el libro sea de verdad un archivo.
           </p>
         </div>
@@ -148,6 +165,7 @@ export function PanelAjustes({
           </button>
         </div>
       </div>
+      )}
 
       {/* ── Room ───────────────────────────────────────────────────────────── */}
 
@@ -179,6 +197,28 @@ export function PanelAjustes({
           <span className="campo__nota">
             La hoja compuesta no cambia: un libro se imprime en papel, y una página que se vuelve
             gris de noche es una pantalla fingiendo ser una página.
+          </span>
+        </div>
+
+        <div className="campo">
+          <span className="campo__etiqueta">Color de la aplicación</span>
+          <div className="acentos">
+            {ACENTOS.map((acento) => (
+              <button
+                key={acento.clave}
+                type="button"
+                title={acento.nombre}
+                aria-label={acento.nombre}
+                aria-pressed={ajustes.acento === acento.clave}
+                className={`acento${ajustes.acento === acento.clave ? " acento--aqui" : ""}`}
+                style={{ background: acento.claro.acento }}
+                onClick={() => onAjustes({ ...ajustes, acento: acento.clave })}
+              />
+            ))}
+          </div>
+          <span className="campo__nota">
+            El icono de la pestaña se dibuja con este color, así que Pliego se distingue de un
+            vistazo entre veinte pestañas abiertas.
           </span>
         </div>
       </div>

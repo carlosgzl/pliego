@@ -1,9 +1,9 @@
 {
-  "name": "scriptorium",
+  "name": "pliego",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Scriptorium — a place to write books. Shares its library with Alexandria.",
+  "description": "Pliego — a place to write books. Shares its library with Alexandria.",
   "engines": {
     "node": ">=20"
   },

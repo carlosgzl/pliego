@@ -37,8 +37,8 @@ import {
 
 /** The mirror document inside Alexandria's cloud store. */
 const DOC_ESPEJO = "escritorio";
-const CACHE_LIBROS = "scriptorium.libros";
-const CACHE_RESCATE = "scriptorium.rescate";
+const CACHE_LIBROS = "pliego.libros";
+const CACHE_RESCATE = "pliego.rescate";
 
 export type Via = "servidor" | "nube" | "local";
 

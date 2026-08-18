@@ -2,7 +2,7 @@
  * The library passphrase, as held by THIS browser.
  *
  * It is the same passphrase that opens Alexandria's published library
- * (`biblioteca.clave.txt` on the owner's PC). Scriptorium needs it for exactly
+ * (`biblioteca.clave.txt` on the owner's PC). Pliego needs it for exactly
  * two things: to prove to the cloud store that it may read and write, and to
  * encrypt everything it puts there. It never leaves this device in the clear —
  * what travels is a one-way derivation that cannot decrypt anything.

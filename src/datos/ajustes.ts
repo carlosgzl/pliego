@@ -9,13 +9,15 @@
  * its column width on a desktop.
  */
 
-const ALMACEN = "scriptorium.ajustes";
+const ALMACEN = "pliego.ajustes";
 
 export type Tema = "claro" | "oscuro" | "sepia" | "sistema";
 export type SitioPrevia = "abajo" | "lado" | "oculta";
 
 export interface Ajustes {
   tema: Tema;
+  /** Accent colour of the APP (not of the book). Drives the favicon too. */
+  acento: string;
   /** Typeface of the EDITOR — not of the book. */
   fuenteEditor: string;
   /** Editor body size in px. */
@@ -42,6 +44,7 @@ export interface Ajustes {
 
 export const AJUSTES_POR_DEFECTO: Ajustes = {
   tema: "sistema",
+  acento: "pizarra",
   fuenteEditor: "garamond",
   tamanoEditor: 18,
   anchoEditor: 68,
@@ -83,7 +86,7 @@ export function guardarAjustes(ajustes: Ajustes): void {
  * which is the honest version: it goes DOWN when you cut, because cutting three
  * hundred words is not writing three hundred words.
  */
-const DIARIO = "scriptorium.diario";
+const DIARIO = "pliego.diario";
 
 interface Diario {
   fecha: string;

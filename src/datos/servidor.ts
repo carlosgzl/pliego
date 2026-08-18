@@ -3,7 +3,7 @@
  *
  * These are the SAME endpoints Alexandria's own Escritorio calls
  * (`/writing/*`, served by `apps/api/src/writing/`), pointed at the same folder
- * on Drive. Nothing here is a Scriptorium-only backend — that is what makes the
+ * on Drive. Nothing here is a Pliego-only backend — that is what makes the
  * two apps one library rather than two copies.
  *
  * Where the server is, resolved on every request so the same build works from

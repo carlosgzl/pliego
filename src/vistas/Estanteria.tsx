@@ -22,6 +22,7 @@ import { Portada } from "./Portada";
 export function Estanteria({
   catalogo,
   cargando,
+  dentro,
   onAbrir,
   onCrear,
   onDuplicar,
@@ -29,9 +30,13 @@ export function Estanteria({
   onBorrar,
   onAjustes,
   onRecargar,
+  onEntrar,
+  onSalir,
 }: {
   catalogo: Catalogo | null;
   cargando: boolean;
+  /** Somebody has signed in: the real library, and saving. */
+  dentro: boolean;
   onAbrir: (slug: string) => void;
   onCrear: (titulo: string) => void;
   onDuplicar: (slug: string) => void;
@@ -39,6 +44,8 @@ export function Estanteria({
   onBorrar: (slug: string) => void;
   onAjustes: () => void;
   onRecargar: () => void;
+  onEntrar: () => void;
+  onSalir: () => void;
 }) {
   const [creando, setCreando] = useState(false);
   const [renombrando, setRenombrando] = useState<LibroResumen | null>(null);
@@ -52,7 +59,7 @@ export function Estanteria({
       <div className="estanteria__dentro">
         <div className="marca">
           <span className="marca__nombre">
-            Scriptorium<span className="marca__punto">.</span>
+            Pliego<span className="marca__punto">.</span>
           </span>
           <span className="eyebrow">un sitio para escribir libros</span>
         </div>
@@ -60,28 +67,45 @@ export function Estanteria({
         <div className="cabecera">
           <div className="cabecera__texto">
             <span className="cabecera__linea">
-              {cargando
-                ? "Buscando tus libros…"
-                : libros.length === 0
-                  ? "La estantería está vacía."
-                  : `${libros.length} ${libros.length === 1 ? "obra" : "obras"} · ${palabras.toLocaleString(
-                      "es-ES",
-                    )} palabras · ${minutosDeLectura(palabras)} min de lectura`}
+              {!dentro
+                ? "Estás mirando un libro de muestra. Entra para abrir el tuyo y para guardar."
+                : cargando
+                  ? "Buscando tus libros…"
+                  : libros.length === 0
+                    ? "La estantería está vacía."
+                    : `${libros.length} ${libros.length === 1 ? "obra" : "obras"} · ${palabras.toLocaleString(
+                        "es-ES",
+                      )} palabras · ${minutosDeLectura(palabras)} min de lectura`}
             </span>
           </div>
 
-          <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
-            {catalogo && <Origen catalogo={catalogo} onRecargar={onRecargar} />}
+          <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
+            {dentro && catalogo && <Origen catalogo={catalogo} onRecargar={onRecargar} />}
             <button type="button" className="boton boton--desnudo" onClick={onAjustes} title="Ajustes">
               <Icono nombre="ajustes" />
             </button>
-            <button type="button" className="boton boton--principal" onClick={() => setCreando(true)}>
-              <Icono nombre="mas" /> Nuevo libro
-            </button>
+            {dentro ? (
+              <>
+                <button type="button" className="boton" onClick={onSalir} title="Cerrar sesión">
+                  Salir
+                </button>
+                <button
+                  type="button"
+                  className="boton boton--principal"
+                  onClick={() => setCreando(true)}
+                >
+                  <Icono nombre="mas" /> Nuevo libro
+                </button>
+              </>
+            ) : (
+              <button type="button" className="boton boton--principal" onClick={onEntrar}>
+                Entrar
+              </button>
+            )}
           </div>
         </div>
 
-        {!cargando && libros.length === 0 && (
+        {!cargando && dentro && libros.length === 0 && (
           <div className="vacio">
             <span style={{ color: "var(--tenue)" }}>
               <Icono nombre="libro" tamano={30} />
@@ -104,6 +128,9 @@ export function Estanteria({
               <Obra
                 key={libro.slug}
                 libro={libro}
+                /* Duplicating, renaming and deleting are writing. A visitor
+                   gets the cover and the reader, and no menu at all. */
+                conMenu={dentro}
                 onAbrir={() => onAbrir(libro.slug)}
                 onDuplicar={() => onDuplicar(libro.slug)}
                 onRenombrar={() => setRenombrando(libro)}
@@ -164,12 +191,14 @@ export function Estanteria({
 
 function Obra({
   libro,
+  conMenu,
   onAbrir,
   onDuplicar,
   onRenombrar,
   onBorrar,
 }: {
   libro: LibroResumen;
+  conMenu: boolean;
   onAbrir: () => void;
   onDuplicar: () => void;
   onRenombrar: () => void;
@@ -210,6 +239,7 @@ function Obra({
             })}
           </span>
         </button>
+        {conMenu && (
         <div style={{ position: "relative" }}>
           <button
             type="button"
@@ -273,6 +303,7 @@ function Obra({
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   );

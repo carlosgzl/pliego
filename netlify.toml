@@ -1,4 +1,4 @@
-# Scriptorium — a static Vite build. There is no backend here on purpose: the
+# Pliego — a static Vite build. There is no backend here on purpose: the
 # books live in Alexandria's API (the PC) and in Alexandria's encrypted cloud
 # store, and this site is the writing surface for both.
 [build]

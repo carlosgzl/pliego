@@ -1,9 +1,9 @@
 /**
- * The Alexandria cloud store, from Scriptorium.
+ * The Alexandria cloud store, from Pliego.
  *
  * THIS IS THE SHARED API. Alexandria's Netlify function (`/api/nube/*`) already
  * holds an encrypted, always-on store that its own PC drains into the real
- * Markdown files on Drive. Scriptorium speaks the exact same protocol, so the
+ * Markdown files on Drive. Pliego speaks the exact same protocol, so the
  * two apps are looking at ONE library — write a chapter here and Alexandria
  * shows it, with no second server, no second account and no copy to keep in
  * sync.

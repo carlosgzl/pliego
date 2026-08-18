@@ -43,6 +43,7 @@ import {
 import { pilaDe } from "@/nucleo/fuentes";
 import { componer, descomponer, type Meta } from "@/nucleo/libro";
 import { guardarLibro, leerLibro, type ResultadoGuardado } from "@/datos/biblioteca";
+import { ficheroDeMuestra } from "@/datos/muestra";
 import { marcarArranque, palabrasDeHoy, type Ajustes } from "@/datos/ajustes";
 import { avisar } from "@/ui/Avisos";
 import { Icono } from "@/ui/Icono";
@@ -60,14 +61,19 @@ type Estado = "abriendo" | "limpio" | "escribiendo" | "guardando" | "guardado" |
 
 export function Taller({
   slug,
+  demo,
   ajustes,
   onAjustes,
   onSalir,
+  onEntrar,
 }: {
   slug: string;
+  /** Nobody has signed in: the sample book, and nothing is written anywhere. */
+  demo: boolean;
   ajustes: Ajustes;
   onAjustes: (ajustes: Ajustes) => void;
   onSalir: () => void;
+  onEntrar: () => void;
 }) {
   const [meta, setMeta] = useState<Meta | null>(null);
   const [cuerpo, setCuerpo] = useState("");
@@ -90,7 +96,9 @@ export function Taller({
   useEffect(() => {
     let vivo = true;
     void (async () => {
-      const fichero = await leerLibro(slug);
+      // Nobody signed in: the sample book, straight from memory. No request is
+      // made at all — a visitor's browser never reaches for his library.
+      const fichero = demo ? ficheroDeMuestra() : await leerLibro(slug);
       if (!vivo) {
         return;
       }
@@ -109,7 +117,7 @@ export function Taller({
     return () => {
       vivo = false;
     };
-  }, [slug, onSalir]);
+  }, [slug, demo, onSalir]);
 
   /* ── Derived ─────────────────────────────────────────────────────────────── */
 
@@ -138,6 +146,13 @@ export function Taller({
         setEstado("limpio");
         return;
       }
+      if (demo) {
+        // The sample book is never written anywhere, and the bar says so rather
+        // than showing a tick over text that will vanish with the tab.
+        setEstado("problema");
+        setProblema("Es el libro de muestra: no se guarda. Entra para escribir el tuyo.");
+        return;
+      }
       setEstado("guardando");
       let resultado: ResultadoGuardado;
       try {
@@ -154,7 +169,7 @@ export function Taller({
       setProblema(resultado.problema ?? null);
       setEstado(resultado.problema ? "problema" : "guardado");
     },
-    [slug],
+    [slug, demo],
   );
 
   /* Debounced autosave. The timer is cleared on unmount AND the book is written
@@ -190,13 +205,15 @@ export function Taller({
       return;
     }
     const alSalir = (evento: BeforeUnloadEvent) => {
-      if (estado === "escribiendo" || estado === "guardando" || estado === "problema") {
+      // Never for the sample book: warning somebody that they are about to lose
+      // text that was never going to be saved is just noise.
+      if (!demo && (estado === "escribiendo" || estado === "guardando" || estado === "problema")) {
         evento.preventDefault();
       }
     };
     window.addEventListener("beforeunload", alSalir);
     return () => window.removeEventListener("beforeunload", alSalir);
-  }, [estado, ajustes.avisarSalida]);
+  }, [estado, demo, ajustes.avisarSalida]);
 
   /* ── Editing ─────────────────────────────────────────────────────────────── */
 
@@ -436,7 +453,13 @@ export function Taller({
             )}
           </span>
 
-          <Guardado estado={estado} problema={problema} />
+          {demo ? (
+            <button type="button" className="boton boton--principal" onClick={onEntrar}>
+              Entrar para escribir
+            </button>
+          ) : (
+            <Guardado estado={estado} problema={problema} />
+          )}
 
           <div style={{ display: "flex", gap: "0.15rem" }}>
             <button
@@ -599,6 +622,7 @@ export function Taller({
         {panel === "diseno" && (
           <PanelDiseno
             meta={meta}
+            cuerpo={cuerpo}
             onCambiar={(siguiente) => {
               setMeta(siguiente);
               setEstado("escribiendo");

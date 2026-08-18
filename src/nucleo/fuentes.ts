@@ -5,7 +5,7 @@
  * and Alexandria reads the same files with its own copy of this table, so a key
  * that exists here and not there lays the book out in the fallback face. The
  * first twelve keys below are exactly Alexandria's, in the same order and with
- * the same stacks; anything added after them is a Scriptorium extra and
+ * the same stacks; anything added after them is a Pliego extra and
  * degrades to the fallback elsewhere, which is fine — but never CHANGE one.
  *
  * These are all system faces on purpose. A web font is a request that can fail,
@@ -117,7 +117,7 @@ export const FUENTES: Fuente[] = [
       '"Old English Text MT", "Blackadder ITC", Luminari, "UnifrakturMaguntia", "Iowan Old Style", Georgia, serif',
   },
 
-  /* ── Scriptorium's own ──────────────────────────────────────────────────── */
+  /* ── Pliego's own ──────────────────────────────────────────────────── */
   {
     key: "caslon",
     name: "Caslon",

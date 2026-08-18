@@ -1,13 +1,22 @@
 /**
- * The design panel: everything about how the book LOOKS.
+ * El panel de diseño: cómo se ve el libro.
  *
- * Four tabs, and the order is the order you actually decide things in — the
- * whole page first (a recipe), then the type, then the page furniture, then the
- * cover. Nothing here is hidden behind an "advanced" toggle: a writer who wants
- * 17 mm margins should be able to type 17.
+ * REWRITTEN after the owner's verdict — «no es entendible y además se ve
+ * horrible». Three things were wrong and all three are fixed here:
  *
- * Every control writes straight through to the book's front matter, so what you
- * see in the galley beside you is what is in the file.
+ * 1. NO PICTURE. Thirty controls and no page in sight, so you moved something
+ *    called "interlineado" and had to go looking for the effect. On a phone the
+ *    panel covered the galley completely, so you could not look at all. Now a
+ *    real page sits at the top of the panel, pinned, and every control is next
+ *    to the thing it changes.
+ * 2. PICKING BLIND. Typefaces in a dropdown of names, and six design recipes
+ *    described in words. Now every typeface is drawn in itself and every recipe
+ *    is a stamp of your own book set that way — you choose by looking.
+ * 3. NUMBERS INSTEAD OF WORDS. «1.42 ×» means nothing to a writer. Every slider
+ *    now says what it IS at that value — «normal», «holgado», «de bolsillo».
+ *
+ * The order of the tabs is the order the decisions actually happen in: pick a
+ * whole style, then the letter, then the paper, then the cover.
  */
 
 import { useRef, useState, type ChangeEvent } from "react";
@@ -17,20 +26,30 @@ import type { Diseno, Meta, Portada as TipoPortada } from "@/nucleo/libro";
 import { RECETAS } from "@/nucleo/recetas";
 import { avisar } from "@/ui/Avisos";
 import { Icono } from "@/ui/Icono";
-import { prepararImagen } from "./Portada";
+import { MiniPagina } from "./MiniPagina";
+import { Portada, prepararImagen } from "./Portada";
 
-type Pestana = "conjunto" | "letra" | "pagina" | "portada";
+type Pestana = "estilo" | "letra" | "pagina" | "portada";
+
+const PESTANAS: { clave: Pestana; texto: string }[] = [
+  { clave: "estilo", texto: "Estilo" },
+  { clave: "letra", texto: "Letra" },
+  { clave: "pagina", texto: "Página" },
+  { clave: "portada", texto: "Portada" },
+];
 
 export function PanelDiseno({
   meta,
+  cuerpo,
   onCambiar,
   onCerrar,
 }: {
   meta: Meta;
+  cuerpo: string;
   onCambiar: (meta: Meta) => void;
   onCerrar: () => void;
 }) {
-  const [pestana, setPestana] = useState<Pestana>("conjunto");
+  const [pestana, setPestana] = useState<Pestana>("estilo");
 
   const cambiarDiseno = (cambios: Partial<Diseno>) => {
     const diseno = { ...meta.diseno, ...cambios };
@@ -45,80 +64,113 @@ export function PanelDiseno({
   };
 
   return (
-    <aside className="panel" aria-label="Diseño del libro">
-      <div className="panel__cabeza">
-        <span className="panel__titulo">Diseño</span>
-        <button type="button" className="boton boton--desnudo" onClick={onCerrar} title="Cerrar">
-          <Icono nombre="cerrar" />
-        </button>
-      </div>
+    <>
+      {/* On a phone the panel is the whole screen. It used to be 88 % of it,
+          and the strip of app left showing down the left-hand side — half of
+          the page preview, cut off — read as a frame that meant nothing. */}
+      <div className="panel-velo" onClick={onCerrar} role="presentation" />
 
-      <div className="panel__pestanas" role="tablist">
-        {(
-          [
-            ["conjunto", "Conjunto"],
-            ["letra", "Letra"],
-            ["pagina", "Página"],
-            ["portada", "Portada"],
-          ] as const
-        ).map(([clave, texto]) => (
+      <aside className="panel" aria-label="Diseño del libro">
+        <div className="panel__cabeza">
+          <span className="panel__titulo">Diseño del libro</span>
           <button
-            key={clave}
             type="button"
-            role="tab"
-            aria-selected={pestana === clave}
-            className={`pestana${pestana === clave ? " pestana--aqui" : ""}`}
-            onClick={() => setPestana(clave)}
+            className="boton boton--desnudo"
+            onClick={onCerrar}
+            aria-label="Cerrar el diseño"
           >
-            {texto}
+            <Icono nombre="cerrar" />
           </button>
-        ))}
-      </div>
+        </div>
 
-      {pestana === "conjunto" && <Conjunto meta={meta} onCambiar={onCambiar} />}
-      {pestana === "letra" && <Letra diseno={meta.diseno} onCambiar={cambiarDiseno} />}
-      {pestana === "pagina" && <Pagina diseno={meta.diseno} onCambiar={cambiarDiseno} />}
-      {pestana === "portada" && (
-        <PortadaAjustes meta={meta} onCambiar={onCambiar} onCambiarPortada={cambiarPortada} />
-      )}
-    </aside>
+        {/* The page, pinned. Everything below changes THIS. */}
+        <div className="panel__muestra">
+          {pestana === "portada" ? (
+            <div className="panel__portada">
+              <Portada meta={meta} tamano="mini" />
+            </div>
+          ) : (
+            <MiniPagina meta={meta} cuerpo={cuerpo} alto={168} />
+          )}
+        </div>
+
+        <div className="panel__pestanas" role="tablist">
+          {PESTANAS.map(({ clave, texto }) => (
+            <button
+              key={clave}
+              type="button"
+              role="tab"
+              aria-selected={pestana === clave}
+              className={`pestana${pestana === clave ? " pestana--aqui" : ""}`}
+              onClick={() => setPestana(clave)}
+            >
+              {texto}
+            </button>
+          ))}
+        </div>
+
+        <div className="panel__cuerpo">
+          {pestana === "estilo" && (
+            <Estilo meta={meta} cuerpo={cuerpo} onCambiar={onCambiar} />
+          )}
+          {pestana === "letra" && <Letra diseno={meta.diseno} onCambiar={cambiarDiseno} />}
+          {pestana === "pagina" && <Pagina diseno={meta.diseno} onCambiar={cambiarDiseno} />}
+          {pestana === "portada" && (
+            <PortadaAjustes meta={meta} onCambiar={onCambiar} onCambiarPortada={cambiarPortada} />
+          )}
+        </div>
+      </aside>
+    </>
   );
 }
 
-/* ── Tab 1: the book as a whole ───────────────────────────────────────────── */
+/* ── Estilo: whole designs, and the book's own details ────────────────────── */
 
-function Conjunto({ meta, onCambiar }: { meta: Meta; onCambiar: (meta: Meta) => void }) {
+function Estilo({
+  meta,
+  cuerpo,
+  onCambiar,
+}: {
+  meta: Meta;
+  cuerpo: string;
+  onCambiar: (meta: Meta) => void;
+}) {
   return (
     <>
       <div className="grupo">
-        <span className="grupo__titulo">Empieza por una receta</span>
+        <span className="grupo__titulo">Elige cómo quieres que sea</span>
         <p className="campo__nota">
-          Cada una es una página entera y coherente. Elige la más cercana y ajusta después: los
-          cambios que hagas se conservan.
+          Cada uno es una página entera y coherente, con su letra, sus márgenes y sus capítulos ya
+          puestos de acuerdo. Elige el que más se parezca a tu libro; después puedes cambiar lo que
+          quieras.
         </p>
-        <div className="recetas">
-          {RECETAS.map((receta) => (
-            <button
-              key={receta.clave}
-              type="button"
-              className="receta"
-              onClick={() => {
-                onCambiar({
-                  ...meta,
-                  diseno: { ...receta.diseno, fuentePila: pilaDe(receta.diseno.fuente) },
-                });
-                avisar(`Diseño «${receta.nombre}» aplicado.`);
-              }}
-            >
-              <span className="receta__nombre">{receta.nombre}</span>
-              <span className="receta__que">{receta.que}</span>
-            </button>
-          ))}
+        <div className="sellos">
+          {RECETAS.map((receta) => {
+            const suDiseno = { ...receta.diseno, fuentePila: pilaDe(receta.diseno.fuente) };
+            const puesto = mismoDiseno(meta.diseno, suDiseno);
+            return (
+              <button
+                key={receta.clave}
+                type="button"
+                className={`sello${puesto ? " sello--aqui" : ""}`}
+                onClick={() => {
+                  onCambiar({ ...meta, diseno: suDiseno });
+                  avisar(`Estilo «${receta.nombre}».`);
+                }}
+                title={receta.que}
+              >
+                <span className="sello__hoja">
+                  <MiniPagina meta={{ ...meta, diseno: suDiseno }} cuerpo={cuerpo} alto={112} />
+                </span>
+                <span className="sello__nombre">{receta.nombre}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       <div className="grupo">
-        <span className="grupo__titulo">La obra</span>
+        <span className="grupo__titulo">De qué libro se trata</span>
         <Texto
           etiqueta="Título"
           valor={meta.titulo}
@@ -139,22 +191,22 @@ function Conjunto({ meta, onCambiar }: { meta: Meta; onCambiar: (meta: Meta) => 
           valor={meta.dedicatoria}
           onCambiar={(dedicatoria) => onCambiar({ ...meta, dedicatoria })}
         />
-        <label className="campo">
-          <span className="campo__etiqueta">Estado</span>
-          <select
-            className="selector"
-            value={meta.estado}
-            onChange={(evento) => onCambiar({ ...meta, estado: evento.target.value })}
-          >
-            <option value="idea">Idea</option>
-            <option value="borrador">Borrador</option>
-            <option value="revisión">En revisión</option>
-            <option value="terminado">Terminado</option>
-          </select>
-        </label>
+        <div className="campo">
+          <span className="campo__etiqueta">Por dónde va</span>
+          <Segmentado
+            opciones={[
+              { valor: "idea", texto: "Idea" },
+              { valor: "borrador", texto: "Borrador" },
+              { valor: "revisión", texto: "Revisión" },
+              { valor: "terminado", texto: "Hecho" },
+            ]}
+            valor={meta.estado}
+            onCambiar={(estado) => onCambiar({ ...meta, estado })}
+          />
+        </div>
         <Numero
-          etiqueta="Objetivo de palabras"
-          nota="0 para no marcarse ninguno."
+          etiqueta="Cuántas palabras quieres llegar a escribir"
+          nota="Déjalo en 0 si no quieres marcarte ninguna meta."
           valor={meta.meta ?? 0}
           minimo={0}
           maximo={500000}
@@ -166,7 +218,41 @@ function Conjunto({ meta, onCambiar }: { meta: Meta; onCambiar: (meta: Meta) => 
   );
 }
 
-/* ── Tab 2: type ──────────────────────────────────────────────────────────── */
+/** Whether two designs would print the same page. */
+function mismoDiseno(a: Diseno, b: Diseno): boolean {
+  const claves = Object.keys(b) as (keyof Diseno)[];
+  return claves.every((clave) => clave === "fuentePila" || a[clave] === b[clave]);
+}
+
+/* ── Letra ────────────────────────────────────────────────────────────────── */
+
+const TAMANOS: [number, string][] = [
+  [9, "muy pequeña"],
+  [10, "pequeña"],
+  [11, "normal"],
+  [12, "cómoda"],
+  [14, "grande"],
+  [18, "muy grande"],
+];
+
+const INTERLINEADOS: [number, string][] = [
+  [1.2, "apretado"],
+  [1.35, "justo"],
+  [1.5, "normal"],
+  [1.75, "holgado"],
+  [2.2, "a doble espacio"],
+];
+
+/** The word for a value: the last label whose threshold it has reached. */
+function palabraDe(escala: [number, string][], valor: number): string {
+  let texto = escala[0]![1];
+  for (const [limite, nombre] of escala) {
+    if (valor >= limite) {
+      texto = nombre;
+    }
+  }
+  return texto;
+}
 
 function Letra({
   diseno,
@@ -181,7 +267,8 @@ function Letra({
   return (
     <>
       <div className="grupo">
-        <span className="grupo__titulo">Tipografía</span>
+        <span className="grupo__titulo">La letra del libro</span>
+        <p className="campo__nota">Cada nombre está escrito con su propia letra.</p>
         {GRUPOS_FUENTE.map((grupo) => {
           const fuentes = FUENTES.filter((fuente) => fuente.grupo === grupo.grupo);
           if (fuentes.length === 0) {
@@ -190,121 +277,108 @@ function Letra({
           return (
             <div key={grupo.grupo} className="campo">
               <span className="campo__etiqueta">{grupo.titulo}</span>
-              <div className="fuentes">
-                {fuentes.map((fuente) => (
-                  <button
-                    key={fuente.key}
-                    type="button"
-                    className={`fuente${diseno.fuente === fuente.key ? " fuente--aqui" : ""}`}
-                    onClick={() => onCambiar({ fuente: fuente.key })}
-                  >
-                    <span className="fuente__muestra" style={{ fontFamily: fuente.stack }}>
-                      {fuente.name} — el copista
-                    </span>
-                    <span className="fuente__nombre">{fuente.hint}</span>
-                  </button>
-                ))}
-              </div>
+              <ListaFuentes
+                valor={diseno.fuente}
+                fuentes={fuentes}
+                onCambiar={(fuente) => onCambiar({ fuente })}
+              />
             </div>
           );
         })}
       </div>
 
       <div className="grupo">
-        <span className="grupo__titulo">Cuerpo y ritmo</span>
+        <span className="grupo__titulo">Tamaño y aire</span>
         <Rango
-          etiqueta="Cuerpo"
+          etiqueta="Tamaño de la letra"
           valor={diseno.tamano}
-          unidad="pt"
+          palabra={palabraDe(TAMANOS, diseno.tamano)}
           minimo={7}
           maximo={18}
           paso={0.5}
           onCambiar={(tamano) => onCambiar({ tamano })}
         />
         <Rango
-          etiqueta="Interlineado"
+          etiqueta="Espacio entre renglones"
           valor={diseno.interlineado}
-          unidad="×"
+          palabra={palabraDe(INTERLINEADOS, diseno.interlineado)}
           minimo={1}
           maximo={2.2}
           paso={0.02}
           onCambiar={(interlineado) => onCambiar({ interlineado })}
         />
-        <Rango
-          etiqueta="Espaciado entre letras"
-          valor={diseno.tracking}
-          unidad="em"
-          minimo={-0.03}
-          maximo={0.08}
-          paso={0.005}
-          onCambiar={(tracking) => onCambiar({ tracking })}
-        />
-        <p className={`campo__nota${juicio === "buena" ? "" : " campo__nota--aviso"}`}>
-          {caracteres} caracteres por línea —{" "}
+        <p className={`aviso-medida${juicio === "buena" ? "" : " aviso-medida--mal"}`}>
+          <strong>{caracteres} letras por renglón.</strong>{" "}
           {juicio === "buena"
-            ? "dentro de lo cómodo (52–82)."
+            ? "Es la medida cómoda de leer."
             : juicio === "corta"
-              ? "línea corta: el ojo salta demasiado. Sube el ancho o baja el cuerpo."
-              : "línea larga: cuesta encontrar el renglón siguiente. Baja el ancho o sube el cuerpo."}
+              ? "Renglón corto: el ojo salta mucho. Prueba a bajar el tamaño o a estrechar los márgenes."
+              : "Renglón largo: cuesta encontrar el siguiente. Prueba a subir el tamaño o a ensanchar los márgenes."}
         </p>
       </div>
 
       <div className="grupo">
-        <span className="grupo__titulo">Párrafo</span>
+        <span className="grupo__titulo">Los párrafos</span>
         <Interruptor
-          etiqueta="Justificado"
+          etiqueta="Alinear los dos lados"
+          nota="Como un libro impreso: los renglones acaban todos en la misma vertical."
           valor={diseno.justificado}
           onCambiar={(justificado) => onCambiar({ justificado })}
         />
         <Interruptor
           etiqueta="Partir palabras con guion"
+          nota="Evita los huecos grandes entre palabras al alinear."
           valor={diseno.guiones}
           onCambiar={(guiones) => onCambiar({ guiones })}
         />
         <Interruptor
-          etiqueta="Sangrar la primera línea"
+          etiqueta="Empezar cada párrafo un poco a la derecha"
+          nota="Lo que hace un libro. La otra forma es separarlos con un hueco."
           valor={diseno.sangria}
           onCambiar={(sangria) => onCambiar({ sangria })}
         />
-        {diseno.sangria && (
+        {diseno.sangria ? (
           <Rango
-            etiqueta="Sangría"
+            etiqueta="Cuánto entra"
             valor={diseno.sangriaEm}
-            unidad="em"
+            palabra={diseno.sangriaEm < 1 ? "poco" : diseno.sangriaEm > 1.8 ? "mucho" : "normal"}
             minimo={0.5}
             maximo={3}
             paso={0.1}
             onCambiar={(sangriaEm) => onCambiar({ sangriaEm })}
           />
-        )}
-        <Rango
-          etiqueta="Aire entre párrafos"
-          valor={diseno.espacioParrafo}
-          unidad="em"
-          minimo={0}
-          maximo={1.5}
-          paso={0.05}
-          onCambiar={(espacioParrafo) => onCambiar({ espacioParrafo })}
-        />
-        {diseno.sangria && diseno.espacioParrafo > 0.15 && (
-          <p className="campo__nota campo__nota--aviso">
-            Sangría y aire a la vez es doble señal: un libro usa una de las dos.
-          </p>
+        ) : (
+          <Rango
+            etiqueta="Hueco entre párrafos"
+            valor={diseno.espacioParrafo}
+            palabra={
+              diseno.espacioParrafo === 0
+                ? "ninguno"
+                : diseno.espacioParrafo < 0.6
+                  ? "poco"
+                  : "amplio"
+            }
+            minimo={0}
+            maximo={1.5}
+            paso={0.05}
+            onCambiar={(espacioParrafo) => onCambiar({ espacioParrafo })}
+          />
         )}
       </div>
 
       <div className="grupo">
-        <span className="grupo__titulo">Arranque de capítulo</span>
+        <span className="grupo__titulo">Cómo empieza cada capítulo</span>
         <Interruptor
-          etiqueta="Capitular (letra grande)"
+          etiqueta="Letra grande al empezar"
+          nota="La capitular: la primera letra ocupa varios renglones."
           valor={diseno.capitular}
           onCambiar={(capitular) => onCambiar({ capitular })}
         />
         {diseno.capitular && (
           <Rango
-            etiqueta="Altura de la capitular"
+            etiqueta="Cuánto ocupa"
             valor={diseno.capitularLineas}
-            unidad=" líneas"
+            palabra={`${diseno.capitularLineas} renglones`}
             minimo={2}
             maximo={5}
             paso={1}
@@ -312,7 +386,8 @@ function Letra({
           />
         )}
         <Interruptor
-          etiqueta="Primera línea en versalitas"
+          etiqueta="Primer renglón en mayúsculas pequeñas"
+          nota="Un recurso clásico que hace que el capítulo arranque con calma."
           valor={diseno.versalitas}
           onCambiar={(versalitas) => onCambiar({ versalitas })}
         />
@@ -321,7 +396,40 @@ function Letra({
   );
 }
 
-/* ── Tab 3: the page ──────────────────────────────────────────────────────── */
+function ListaFuentes({
+  fuentes,
+  valor,
+  onCambiar,
+}: {
+  fuentes: typeof FUENTES;
+  valor: string;
+  onCambiar: (clave: string) => void;
+}) {
+  return (
+    <div className="fuentes">
+      {fuentes.map((fuente) => (
+        <button
+          key={fuente.key}
+          type="button"
+          className={`fuente${valor === fuente.key ? " fuente--aqui" : ""}`}
+          onClick={() => onCambiar(fuente.key)}
+        >
+          <span className="fuente__muestra" style={{ fontFamily: fuente.stack }}>
+            {fuente.name}
+          </span>
+          <span className="fuente__nombre">{fuente.hint}</span>
+          {valor === fuente.key && (
+            <span className="fuente__marca">
+              <Icono nombre="guardado" tamano={13} />
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ── Página ───────────────────────────────────────────────────────────────── */
 
 function Pagina({
   diseno,
@@ -333,110 +441,111 @@ function Pagina({
   return (
     <>
       <div className="grupo">
-        <span className="grupo__titulo">Formato</span>
-        <div className="campo">
-          <select
-            className="selector"
-            value={diseno.pagina}
-            onChange={(evento) => onCambiar({ pagina: evento.target.value as Diseno["pagina"] })}
-          >
-            {FORMATOS.map((formato) => (
-              <option key={formato.clave} value={formato.clave}>
-                {formato.nombre} · {formato.hint}
-              </option>
-            ))}
-          </select>
+        <span className="grupo__titulo">Tamaño del papel</span>
+        <div className="opciones">
+          {FORMATOS.map((formato) => (
+            <button
+              key={formato.clave}
+              type="button"
+              className={`opcion${diseno.pagina === formato.clave ? " opcion--aqui" : ""}`}
+              onClick={() => onCambiar({ pagina: formato.clave })}
+            >
+              <span className="opcion__nombre">{formato.nombre}</span>
+              <span className="opcion__que">{formato.hint}</span>
+            </button>
+          ))}
         </div>
         {diseno.pagina === "personalizada" && (
-          <div className="campo">
-            <span className="campo__etiqueta">Milímetros</span>
-            <div style={{ display: "flex", gap: "0.4rem" }}>
-              <Numero
-                etiqueta="Ancho"
-                valor={diseno.anchoMm}
-                minimo={70}
-                maximo={420}
-                paso={1}
-                onCambiar={(anchoMm) => onCambiar({ anchoMm })}
-              />
-              <Numero
-                etiqueta="Alto"
-                valor={diseno.altoMm}
-                minimo={100}
-                maximo={594}
-                paso={1}
-                onCambiar={(altoMm) => onCambiar({ altoMm })}
-              />
-            </div>
+          <div className="pareja">
+            <Numero
+              etiqueta="Ancho (mm)"
+              valor={diseno.anchoMm}
+              minimo={70}
+              maximo={420}
+              paso={1}
+              onCambiar={(anchoMm) => onCambiar({ anchoMm })}
+            />
+            <Numero
+              etiqueta="Alto (mm)"
+              valor={diseno.altoMm}
+              minimo={100}
+              maximo={594}
+              paso={1}
+              onCambiar={(altoMm) => onCambiar({ altoMm })}
+            />
           </div>
         )}
       </div>
 
       <div className="grupo">
         <span className="grupo__titulo">Márgenes</span>
-        <Segmentado
-          opciones={MARGENES.map((margen) => ({ valor: margen.clave, texto: margen.nombre }))}
-          valor={diseno.margenes}
-          onCambiar={(margenes) => onCambiar({ margenes: margenes as Diseno["margenes"] })}
-        />
-        {diseno.margenes === "personalizados" ? (
+        <div className="opciones">
+          {MARGENES.map((margen) => (
+            <button
+              key={margen.clave}
+              type="button"
+              className={`opcion${diseno.margenes === margen.clave ? " opcion--aqui" : ""}`}
+              onClick={() => onCambiar({ margenes: margen.clave })}
+            >
+              <span className="opcion__nombre">{margen.nombre}</span>
+              <span className="opcion__que">{margen.hint}</span>
+            </button>
+          ))}
+        </div>
+        {diseno.margenes === "personalizados" && (
           <>
-            <Rango
-              etiqueta="Arriba"
-              valor={diseno.margenArriba}
-              unidad="mm"
-              minimo={5}
-              maximo={60}
-              paso={1}
-              onCambiar={(margenArriba) => onCambiar({ margenArriba })}
-            />
-            <Rango
-              etiqueta="Abajo"
-              valor={diseno.margenAbajo}
-              unidad="mm"
-              minimo={5}
-              maximo={60}
-              paso={1}
-              onCambiar={(margenAbajo) => onCambiar({ margenAbajo })}
-            />
-            <Rango
-              etiqueta="Lomo (interior)"
-              valor={diseno.margenLomo}
-              unidad="mm"
-              minimo={5}
-              maximo={60}
-              paso={1}
-              onCambiar={(margenLomo) => onCambiar({ margenLomo })}
-            />
-            <Rango
-              etiqueta="Corte (exterior)"
-              valor={diseno.margenCorte}
-              unidad="mm"
-              minimo={5}
-              maximo={60}
-              paso={1}
-              onCambiar={(margenCorte) => onCambiar({ margenCorte })}
-            />
+            <div className="pareja">
+              <Numero
+                etiqueta="Arriba (mm)"
+                valor={diseno.margenArriba}
+                minimo={5}
+                maximo={60}
+                paso={1}
+                onCambiar={(margenArriba) => onCambiar({ margenArriba })}
+              />
+              <Numero
+                etiqueta="Abajo (mm)"
+                valor={diseno.margenAbajo}
+                minimo={5}
+                maximo={60}
+                paso={1}
+                onCambiar={(margenAbajo) => onCambiar({ margenAbajo })}
+              />
+            </div>
+            <div className="pareja">
+              <Numero
+                etiqueta="Interior (mm)"
+                valor={diseno.margenLomo}
+                minimo={5}
+                maximo={60}
+                paso={1}
+                onCambiar={(margenLomo) => onCambiar({ margenLomo })}
+              />
+              <Numero
+                etiqueta="Exterior (mm)"
+                valor={diseno.margenCorte}
+                minimo={5}
+                maximo={60}
+                paso={1}
+                onCambiar={(margenCorte) => onCambiar({ margenCorte })}
+              />
+            </div>
             <p className="campo__nota">
-              En un libro cosido el lomo se lleva unos milímetros de más: parte de ese margen
-              desaparece dentro de la encuadernación.
+              El margen interior es el del lomo: en un libro cosido, parte de él se pierde dentro de
+              la encuadernación, así que suele hacerse un poco más ancho.
             </p>
           </>
-        ) : (
-          <p className="campo__nota">
-            {MARGENES.find((margen) => margen.clave === diseno.margenes)?.hint}
-          </p>
         )}
       </div>
 
       <div className="grupo">
-        <span className="grupo__titulo">Capítulos</span>
+        <span className="grupo__titulo">Los capítulos</span>
         <div className="campo">
           <span className="campo__etiqueta">Dónde empieza cada uno</span>
           <Segmentado
             opciones={[
               { valor: "pagina-nueva", texto: "Página nueva" },
-              { valor: "pagina-impar", texto: "En impar" },
+              { valor: "pagina-impar", texto: "A la derecha" },
               { valor: "seguido", texto: "Seguido" },
             ]}
             valor={diseno.capituloEn}
@@ -446,12 +555,12 @@ function Pagina({
           />
         </div>
         <div className="campo">
-          <span className="campo__etiqueta">Cómo se compone el título</span>
+          <span className="campo__etiqueta">Cómo se ve el título</span>
           <Segmentado
             opciones={[
               { valor: "grande", texto: "Grande" },
               { valor: "discreto", texto: "Discreto" },
-              { valor: "versalitas", texto: "Versalitas" },
+              { valor: "versalitas", texto: "En mayúsculas" },
             ]}
             valor={diseno.tituloCapitulo}
             onCambiar={(tituloCapitulo) =>
@@ -475,10 +584,10 @@ function Pagina({
           />
         </div>
         <div className="campo">
-          <span className="campo__etiqueta">Separador de escena</span>
+          <span className="campo__etiqueta">Marca entre escenas</span>
           <Segmentado
             opciones={[
-              { valor: "linea-en-blanco", texto: "Blanco" },
+              { valor: "linea-en-blanco", texto: "Un hueco" },
               { valor: "asteriscos", texto: "* * *" },
               { valor: "rombo", texto: "◆" },
               { valor: "regla", texto: "———" },
@@ -490,29 +599,37 @@ function Pagina({
       </div>
 
       <div className="grupo">
-        <span className="grupo__titulo">Cornisa y folio</span>
+        <span className="grupo__titulo">Cabecera y número de página</span>
         <div className="campo">
-          <span className="campo__etiqueta">Qué va en la cabecera</span>
-          <select
-            className="selector"
-            value={diseno.encabezado}
-            onChange={(evento) =>
-              onCambiar({ encabezado: evento.target.value as Diseno["encabezado"] })
-            }
-          >
-            <option value="autor-titulo">Autor a la izquierda, título a la derecha</option>
-            <option value="titulo">Solo el título</option>
-            <option value="capitulo">Título y capítulo</option>
-            <option value="ninguno">Nada</option>
-          </select>
+          <span className="campo__etiqueta">Qué se lee arriba de cada página</span>
+          <div className="opciones">
+            {(
+              [
+                ["autor-titulo", "Tu nombre y el título", "El nombre a la izquierda, el título a la derecha. Lo habitual."],
+                ["titulo", "Solo el título", "Más discreto."],
+                ["capitulo", "El título y el capítulo", "Útil en ensayo y manuales."],
+                ["ninguno", "Nada", "La página limpia."],
+              ] as const
+            ).map(([valor, nombre, que]) => (
+              <button
+                key={valor}
+                type="button"
+                className={`opcion${diseno.encabezado === valor ? " opcion--aqui" : ""}`}
+                onClick={() => onCambiar({ encabezado: valor })}
+              >
+                <span className="opcion__nombre">{nombre}</span>
+                <span className="opcion__que">{que}</span>
+              </button>
+            ))}
+          </div>
         </div>
         <div className="campo">
-          <span className="campo__etiqueta">Numeración</span>
+          <span className="campo__etiqueta">Numerar las páginas</span>
           <Segmentado
             opciones={[
               { valor: "arabigos", texto: "1, 2, 3" },
               { valor: "romanos", texto: "i, ii, iii" },
-              { valor: "ninguna", texto: "Sin" },
+              { valor: "ninguna", texto: "Sin número" },
             ]}
             valor={diseno.numeracion}
             onCambiar={(numeracion) =>
@@ -525,9 +642,9 @@ function Pagina({
             <span className="campo__etiqueta">Dónde va el número</span>
             <Segmentado
               opciones={[
-                { valor: "pie-centro", texto: "Pie, centro" },
-                { valor: "pie-fuera", texto: "Pie, fuera" },
-                { valor: "cabeza-fuera", texto: "Cabeza" },
+                { valor: "pie-centro", texto: "Abajo, centrado" },
+                { valor: "pie-fuera", texto: "Abajo, al borde" },
+                { valor: "cabeza-fuera", texto: "Arriba" },
               ]}
               valor={diseno.folio}
               onCambiar={(folio) => onCambiar({ folio: folio as Diseno["folio"] })}
@@ -539,7 +656,7 @@ function Pagina({
   );
 }
 
-/* ── Tab 4: the cover ─────────────────────────────────────────────────────── */
+/* ── Portada ──────────────────────────────────────────────────────────────── */
 
 const TINTAS = [
   "#2f3e4f",
@@ -554,6 +671,14 @@ const TINTAS = [
   "#b0763a",
   "#f4f1ea",
   "#d9d3c7",
+];
+
+const ESTILOS_PORTADA: [TipoPortada["diseno"], string, string][] = [
+  ["sello", "Sello", "Una raya sobre el título"],
+  ["franja", "Franja", "Una banda más oscura detrás"],
+  ["liso", "Liso", "Solo color y letras"],
+  ["rejilla", "Rejilla", "Una cuadrícula muy tenue"],
+  ["medianoche", "Medianoche", "Un halo de luz arriba"],
 ];
 
 function PortadaAjustes({
@@ -585,79 +710,47 @@ function PortadaAjustes({
     <>
       <div className="grupo">
         <span className="grupo__titulo">Estilo</span>
-        <Segmentado
-          opciones={[
-            { valor: "sello", texto: "Sello" },
-            { valor: "franja", texto: "Franja" },
-            { valor: "liso", texto: "Liso" },
-          ]}
-          valor={portada.diseno}
-          onCambiar={(diseno) => onCambiarPortada({ diseno: diseno as TipoPortada["diseno"] })}
-        />
-        <Segmentado
-          opciones={[
-            { valor: "rejilla", texto: "Rejilla" },
-            { valor: "medianoche", texto: "Medianoche" },
-          ]}
-          valor={portada.diseno}
-          onCambiar={(diseno) => onCambiarPortada({ diseno: diseno as TipoPortada["diseno"] })}
-        />
+        <div className="opciones">
+          {ESTILOS_PORTADA.map(([valor, nombre, que]) => (
+            <button
+              key={valor}
+              type="button"
+              className={`opcion${portada.diseno === valor ? " opcion--aqui" : ""}`}
+              onClick={() => onCambiarPortada({ diseno: valor })}
+            >
+              <span className="opcion__nombre">{nombre}</span>
+              <span className="opcion__que">{que}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="grupo">
-        <span className="grupo__titulo">Color de fondo</span>
-        <div className="colores">
-          {TINTAS.map((color) => (
-            <button
-              key={color}
-              type="button"
-              aria-label={color}
-              className={`color${portada.color === color ? " color--aqui" : ""}`}
-              style={{ background: color }}
-              onClick={() => onCambiarPortada({ color })}
-            />
-          ))}
-        </div>
-        <input
-          type="color"
-          className="entrada"
-          value={portada.color}
-          onChange={(evento) => onCambiarPortada({ color: evento.target.value })}
-          aria-label="Color a medida"
+        <span className="grupo__titulo">Color del fondo</span>
+        <Colores
+          valor={portada.color}
+          onCambiar={(color) => onCambiarPortada({ color })}
+          etiqueta="Color del fondo a medida"
         />
-
         <span className="grupo__titulo">Color de las letras</span>
-        <div className="colores">
-          {TINTAS.map((color) => (
-            <button
-              key={color}
-              type="button"
-              aria-label={color}
-              className={`color${portada.tinta === color ? " color--aqui" : ""}`}
-              style={{ background: color }}
-              onClick={() => onCambiarPortada({ tinta: color })}
-            />
-          ))}
-        </div>
+        <Colores
+          valor={portada.tinta}
+          onCambiar={(tinta) => onCambiarPortada({ tinta })}
+          etiqueta="Color de las letras a medida"
+        />
       </div>
 
       <div className="grupo">
-        <span className="grupo__titulo">Letra de la portada</span>
-        <select
-          className="selector"
-          value={portada.fuente}
-          onChange={(evento) => onCambiarPortada({ fuente: evento.target.value })}
-        >
-          {FUENTES.map((fuente) => (
-            <option key={fuente.key} value={fuente.key}>
-              {fuente.name}
-            </option>
-          ))}
-        </select>
+        <span className="grupo__titulo">La letra de la portada</span>
+        <ListaFuentes
+          fuentes={FUENTES}
+          valor={portada.fuente}
+          onCambiar={(fuente) => onCambiarPortada({ fuente })}
+        />
       </div>
 
       <div className="grupo">
-        <span className="grupo__titulo">Imagen</span>
+        <span className="grupo__titulo">Una imagen</span>
         <input
           ref={entradaFichero}
           type="file"
@@ -665,12 +758,8 @@ function PortadaAjustes({
           hidden
           onChange={(evento) => void elegirImagen(evento)}
         />
-        <div style={{ display: "flex", gap: "0.4rem" }}>
-          <button
-            type="button"
-            className="boton"
-            onClick={() => entradaFichero.current?.click()}
-          >
+        <div className="pareja">
+          <button type="button" className="boton" onClick={() => entradaFichero.current?.click()}>
             <Icono nombre="mas" /> {portada.imagen ? "Cambiar" : "Poner una"}
           </button>
           {portada.imagen && (
@@ -691,7 +780,7 @@ function PortadaAjustes({
                 opciones={[
                   { valor: "arriba", texto: "Arriba" },
                   { valor: "abajo", texto: "Abajo" },
-                  { valor: "ventana", texto: "Ventana" },
+                  { valor: "ventana", texto: "En medio" },
                   { valor: "completa", texto: "Toda" },
                 ]}
                 valor={portada.colocacion}
@@ -701,50 +790,77 @@ function PortadaAjustes({
               />
             </div>
             <div className="campo">
-              <span className="campo__etiqueta">Encaje</span>
+              <span className="campo__etiqueta">Si no encaja</span>
               <Segmentado
                 opciones={[
-                  { valor: "cubrir", texto: "Recortar" },
-                  { valor: "contener", texto: "Entera" },
+                  { valor: "cubrir", texto: "Recortarla" },
+                  { valor: "contener", texto: "Verla entera" },
                 ]}
                 valor={portada.encaje}
-                onCambiar={(encaje) =>
-                  onCambiarPortada({ encaje: encaje as TipoPortada["encaje"] })
-                }
+                onCambiar={(encaje) => onCambiarPortada({ encaje: encaje as TipoPortada["encaje"] })}
               />
             </div>
             <p className="campo__nota">
-              La imagen viaja dentro del propio archivo del libro, reducida a 520 px de ancho: así
-              el libro sigue siendo un solo fichero y la portada se ve también en el móvil.
+              La imagen viaja dentro del propio archivo del libro, reducida: así el libro sigue
+              siendo un solo fichero y la portada se ve también en el móvil.
             </p>
           </>
         )}
       </div>
 
       <div className="grupo">
-        <span className="grupo__titulo">Encuadernación</span>
-        <select
-          className="selector"
-          value={meta.encuadernacion ?? ""}
-          onChange={(evento) =>
-            onCambiar({ ...meta, encuadernacion: evento.target.value || undefined })
-          }
-        >
-          <option value="">Sin especificar</option>
-          <option value="rústica">Rústica</option>
-          <option value="tela">Tela</option>
-          <option value="cartoné">Cartoné</option>
-          <option value="bolsillo">Bolsillo</option>
-        </select>
-        <p className="campo__nota">
-          No cambia nada en pantalla: es una nota tuya sobre cómo imaginas el libro impreso.
-        </p>
+        <span className="grupo__titulo">Cómo lo imaginas encuadernado</span>
+        <Segmentado
+          opciones={[
+            { valor: "", texto: "—" },
+            { valor: "rústica", texto: "Rústica" },
+            { valor: "tela", texto: "Tela" },
+            { valor: "cartoné", texto: "Cartoné" },
+          ]}
+          valor={meta.encuadernacion ?? ""}
+          onCambiar={(valor) => onCambiar({ ...meta, encuadernacion: valor || undefined })}
+        />
+        <p className="campo__nota">Es una nota tuya: no cambia nada en pantalla.</p>
       </div>
     </>
   );
 }
 
-/* ── Controls ─────────────────────────────────────────────────────────────── */
+function Colores({
+  valor,
+  onCambiar,
+  etiqueta,
+}: {
+  valor: string;
+  onCambiar: (color: string) => void;
+  etiqueta: string;
+}) {
+  return (
+    <div className="colores">
+      {TINTAS.map((color) => (
+        <button
+          key={color}
+          type="button"
+          aria-label={color}
+          className={`color${valor === color ? " color--aqui" : ""}`}
+          style={{ background: color }}
+          onClick={() => onCambiar(color)}
+        />
+      ))}
+      <label className="color color--libre" title={etiqueta}>
+        <input
+          type="color"
+          value={valor}
+          onChange={(evento) => onCambiar(evento.target.value)}
+          aria-label={etiqueta}
+        />
+        <Icono nombre="mas" tamano={13} />
+      </label>
+    </div>
+  );
+}
+
+/* ── Controles ────────────────────────────────────────────────────────────── */
 
 function Texto({
   etiqueta,
@@ -806,10 +922,16 @@ function Numero({
   );
 }
 
+/**
+ * A slider that says what it IS, not what it measures.
+ *
+ * «1,42 ×» is a number a typesetter reads and a writer does not. The word is
+ * the label; the figure stays, small, for when you do want to match two books.
+ */
 function Rango({
   etiqueta,
   valor,
-  unidad,
+  palabra,
   minimo,
   maximo,
   paso,
@@ -817,20 +939,18 @@ function Rango({
 }: {
   etiqueta: string;
   valor: number;
-  unidad: string;
+  palabra: string;
   minimo: number;
   maximo: number;
   paso: number;
   onCambiar: (valor: number) => void;
 }) {
-  const decimales = paso < 0.1 ? 3 : paso < 1 ? 2 : 0;
   return (
     <label className="campo">
       <span className="campo__etiqueta">
         {etiqueta}
         <span className="campo__valor">
-          {valor.toFixed(decimales).replace(/\.?0+$/, "")}
-          {unidad}
+          {palabra} <span className="campo__cifra">{valor.toString().replace(".", ",")}</span>
         </span>
       </span>
       <input
@@ -848,16 +968,21 @@ function Rango({
 
 function Interruptor({
   etiqueta,
+  nota,
   valor,
   onCambiar,
 }: {
   etiqueta: string;
+  nota?: string;
   valor: boolean;
   onCambiar: (valor: boolean) => void;
 }) {
   return (
     <label className="interruptor">
-      <span>{etiqueta}</span>
+      <span className="interruptor__texto">
+        <span>{etiqueta}</span>
+        {nota && <span className="campo__nota">{nota}</span>}
+      </span>
       <input
         type="checkbox"
         checked={valor}

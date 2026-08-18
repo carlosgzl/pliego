@@ -31,6 +31,15 @@ export interface GaleraProps {
   /** Called with the page a character offset falls on, for "follow the caret". */
   seguirA?: number | null;
   onPaginaDeCursor?: (pagina: number) => void;
+  /**
+   * A thumbnail: never measured, never observed, never asked how long it is.
+   *
+   * The design panel shows seven of these at once. Each one wiring up a
+   * ResizeObserver and a font-loading callback to answer a question nobody
+   * asked (how many pages is this recipe?) is seven observers firing on every
+   * keystroke, for nothing.
+   */
+  estatico?: boolean;
 }
 
 export function Galera({
@@ -41,6 +50,7 @@ export function Galera({
   onPaginas,
   seguirA,
   onPaginaDeCursor,
+  estatico = false,
 }: GaleraProps) {
   const geo = useMemo(() => geometria(meta.diseno, alto), [meta.diseno, alto]);
   const bloques = useMemo(() => partirEnBloques(cuerpo), [cuerpo]);
@@ -51,7 +61,7 @@ export function Galera({
      of a page turn shows the old page. */
   useLayoutEffect(() => {
     const nodo = flujo.current;
-    if (!nodo) {
+    if (!nodo || estatico) {
       return;
     }
     const medir = () => {
@@ -66,12 +76,12 @@ export function Galera({
     const observador = new ResizeObserver(medir);
     observador.observe(nodo);
     return () => observador.disconnect();
-  }, [geo.paginaAncho, cuerpo, meta.diseno, onPaginas]);
+  }, [geo.paginaAncho, cuerpo, meta.diseno, onPaginas, estatico]);
 
   /* Where the caret is, in pages. Read from the DOM because only the browser
      knows where its own line breaks fell. */
   useEffect(() => {
-    if (seguirA == null || !onPaginaDeCursor) {
+    if (seguirA == null || !onPaginaDeCursor || estatico) {
       return;
     }
     const nodo = flujo.current;
@@ -85,7 +95,7 @@ export function Galera({
     if (elemento) {
       onPaginaDeCursor(paginaDe(elemento.offsetLeft, geo));
     }
-  }, [seguirA, bloques, geo, onPaginaDeCursor, cuerpo, alto]);
+  }, [seguirA, bloques, geo, onPaginaDeCursor, cuerpo, alto, estatico]);
 
   const actual = Math.min(Math.max(1, pagina), total);
   const cornisa = cornisaDe(actual, meta, capituloDe(bloques, actual, geo, flujo.current));

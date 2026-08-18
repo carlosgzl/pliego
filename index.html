@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Scriptorium — escribir libros</title>
+    <title>Pliego — escribir libros</title>
     <meta
       name="description"
       content="Un sitio para escribir libros: escribes arriba y las páginas se componen debajo, con tu tipografía, tus márgenes y tu portada. Comparte biblioteca con Alexandria."
@@ -27,12 +27,19 @@
     <script>
       (function () {
         try {
-          var guardados = JSON.parse(localStorage.getItem("scriptorium.ajustes") || "{}");
+          var guardados = JSON.parse(localStorage.getItem("pliego.ajustes") || "{}");
           var tema = guardados.tema || "sistema";
           if (tema === "sistema") {
             tema = window.matchMedia("(prefers-color-scheme: dark)").matches ? "oscuro" : "claro";
           }
           document.documentElement.dataset.tema = tema;
+          // El icono de la pestaña, con el color guardado, antes de que React
+          // monte: si no, la pestaña parpadea del azul de fábrica al suyo.
+          var acentos = {pizarra:"#3d5a80",tinta:"#2f3437",granate:"#8e2f3f",bosque:"#3a6b4d",tierra:"#8a5a2b",ciruela:"#6b4a7a",cobre:"#a8542f",mar:"#1f6f77"};
+          var color = acentos[guardados.acento] || acentos.pizarra;
+          var svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='" + color + "'/><path d='M9 9h14M9 14h14M9 19h9' stroke='#fdfcf9' stroke-width='2' stroke-linecap='round'/><path d='M9 24h6' stroke='#fdfcf9' stroke-width='2' stroke-linecap='round' opacity='.5'/></svg>";
+          var icono = document.querySelector("link[rel=icon]");
+          if (icono) { icono.href = "data:image/svg+xml," + encodeURIComponent(svg); }
         } catch (error) {
           document.documentElement.dataset.tema = "claro";
         }

@@ -540,14 +540,19 @@
 /* ── Panels (design, cover, export) ───────────────────────────────────────── */
 
 .panel {
-  width: 22rem;
+  width: 23rem;
   max-width: 92vw;
   flex: none;
   border-left: 1px solid var(--linea);
   background: var(--panel);
-  overflow: auto;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+}
+
+/* Only shown on a phone, where the panel is the whole screen. */
+.panel-velo {
+  display: none;
 }
 
 .panel__cabeza {
@@ -557,10 +562,8 @@
   gap: 0.5rem;
   padding: 0.7rem 0.9rem;
   border-bottom: 1px solid var(--linea);
-  position: sticky;
-  top: 0;
   background: var(--panel);
-  z-index: 1;
+  flex: none;
 }
 
 .panel__titulo {
@@ -568,15 +571,40 @@
   font-weight: 600;
 }
 
+/*
+ * The page, pinned above the controls.
+ *
+ * This is the whole fix for "no se entiende": every control is now next to the
+ * thing it changes, including on a phone where the panel covers the galley.
+ */
+.panel__muestra {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.9rem;
+  background: var(--panel-alto);
+  border-bottom: 1px solid var(--linea);
+  min-height: 12rem;
+}
+
+.panel__portada {
+  width: 7.5rem;
+}
+
 .panel__pestanas {
   display: flex;
   gap: 1px;
   padding: 0 0.5rem;
   border-bottom: 1px solid var(--linea);
-  position: sticky;
-  top: 3rem;
   background: var(--panel);
-  z-index: 1;
+  flex: none;
+}
+
+.panel__cuerpo {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 .pestana {
@@ -633,9 +661,19 @@
 }
 
 .campo__valor {
-  font-size: 0.72rem;
+  font-size: 0.74rem;
+  color: var(--acento-ink);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* The figure stays for when you do want to match two books, but it is not the
+   thing you read: the word is. */
+.campo__cifra {
   color: var(--tenue);
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
+  font-size: 0.68rem;
 }
 
 .campo__nota {
@@ -703,19 +741,27 @@
 
 .interruptor {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
-  font-size: 0.8rem;
-  color: var(--ink-suave);
+  font-size: 0.82rem;
+  color: var(--ink);
   cursor: pointer;
+}
+
+.interruptor__texto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
 }
 
 .interruptor input {
   accent-color: var(--acento);
-  width: 1rem;
-  height: 1rem;
+  width: 1.05rem;
+  height: 1.05rem;
   flex: none;
+  margin-top: 0.1rem;
 }
 
 .colores {
@@ -740,6 +786,25 @@
   box-shadow: 0 0 0 2px var(--panel), 0 0 0 3.5px var(--acento);
 }
 
+/* The "any other colour" swatch: the native picker, wearing our own clothes. */
+.color--libre {
+  display: grid;
+  place-items: center;
+  border-style: dashed;
+  border-color: var(--linea-fuerte);
+  background: var(--panel-alto);
+  color: var(--tenue);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.color--libre input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+
 /* ── Font picker ──────────────────────────────────────────────────────────── */
 
 .fuentes {
@@ -748,14 +813,23 @@
   gap: 1px;
 }
 
+/*
+ * Every typeface written in itself.
+ *
+ * A dropdown of names asks you to pick a letter you cannot see. The specimen
+ * IS the control: the name is set in the face it names, so «Garamond» tells you
+ * what Garamond looks like before you choose it.
+ */
 .fuente {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
-  padding: 0.5rem 0.6rem;
+  gap: 0.05rem;
+  padding: 0.45rem 2rem 0.45rem 0.6rem;
+  border: 1px solid transparent;
   border-radius: var(--radio);
   text-align: left;
-  transition: background var(--paso);
+  transition: background var(--paso), border-color var(--paso);
 }
 
 .fuente:hover {
@@ -764,51 +838,146 @@
 
 .fuente--aqui {
   background: var(--acento-tenue);
+  border-color: var(--acento);
 }
 
 .fuente__muestra {
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   line-height: 1.25;
   color: var(--ink);
 }
 
 .fuente__nombre {
   font-size: 0.7rem;
+  line-height: 1.35;
   color: var(--tenue);
 }
 
-/* ── Presets ──────────────────────────────────────────────────────────────── */
+.fuente--aqui .fuente__nombre {
+  color: var(--acento-ink);
+}
 
-.recetas {
+.fuente__marca {
+  position: absolute;
+  top: 50%;
+  right: 0.6rem;
+  transform: translateY(-50%);
+  color: var(--acento);
+}
+
+/* ── Whole designs, as stamps you pick by looking ─────────────────────────── */
+
+.sellos {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+  gap: 0.7rem;
+}
+
+.sello {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 0.4rem;
 }
 
-.receta {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  padding: 0.55rem;
-  border: 1px solid var(--linea);
-  border-radius: var(--radio);
-  text-align: left;
-  transition: border-color var(--paso);
+.sello__hoja {
+  display: block;
+  padding: 3px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  transition: border-color var(--paso), transform var(--paso);
 }
 
-.receta:hover {
+.sello:hover .sello__hoja {
+  transform: translateY(-2px);
+}
+
+.sello--aqui .sello__hoja {
   border-color: var(--acento);
 }
 
-.receta__nombre {
-  font-size: 0.8rem;
+.sello__nombre {
+  font-size: 0.72rem;
+  color: var(--tenue);
+}
+
+.sello--aqui .sello__nombre {
+  color: var(--ink);
   font-weight: 500;
 }
 
-.receta__que {
-  font-size: 0.68rem;
+/* ── One choice per row, with what it means underneath ────────────────────── */
+
+.opciones {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.opcion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: var(--radio);
+  text-align: left;
+  transition: background var(--paso), border-color var(--paso);
+}
+
+.opcion:hover {
+  background: var(--panel-alto);
+}
+
+.opcion--aqui {
+  background: var(--acento-tenue);
+  border-color: var(--acento);
+}
+
+.opcion__nombre {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.opcion__que {
+  font-size: 0.7rem;
   line-height: 1.4;
   color: var(--tenue);
+}
+
+.opcion--aqui .opcion__que {
+  color: var(--acento-ink);
+}
+
+.pareja {
+  display: flex;
+  gap: 0.4rem;
+  align-items: flex-end;
+}
+
+/* The line-measure verdict: advice, not a warning, unless it is one. */
+.aviso-medida {
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radio);
+  background: var(--panel-alto);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--tenue);
+}
+
+.aviso-medida strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.aviso-medida--mal {
+  background: var(--peligro-tenue);
+  color: var(--peligro);
+}
+
+.aviso-medida--mal strong {
+  color: var(--peligro);
 }
 
 /* ── Reader ───────────────────────────────────────────────────────────────── */
@@ -944,17 +1113,36 @@
     height: 0;
   }
 
-  .capitulos,
+  /*
+   * The panel takes the WHOLE screen on a phone.
+   *
+   * It used to be 88 % of it, and the 12 % strip of app left showing down the
+   * left-hand side was the bottom-left corner of the page preview, cut in half
+   * — "un marco que no se entiende", and he was right. A panel that covers
+   * everything is a screen; a panel that covers most things is a mistake.
+   */
   .panel {
     position: fixed;
-    inset: 0 0 0 auto;
-    width: min(20rem, 88vw);
-    z-index: 50;
-    box-shadow: -12px 0 40px -16px rgb(0 0 0 / 35%);
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    border-left: 0;
+    z-index: 55;
+  }
+
+  .panel-velo {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 54;
+    background: var(--ground);
   }
 
   .capitulos {
+    position: fixed;
     inset: 0 auto 0 0;
+    width: min(20rem, 88vw);
+    z-index: 50;
     border-right: 1px solid var(--linea);
     box-shadow: 12px 0 40px -16px rgb(0 0 0 / 35%);
   }
@@ -975,4 +1163,47 @@
   .estanteria__dentro {
     padding: 1.5rem 1rem 3rem;
   }
+}
+
+/* ── The app's own colour, and the tab icon that follows it ───────────────── */
+
+.acentos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.acento {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  border: 1px solid rgb(0 0 0 / 12%);
+  transition: transform var(--paso);
+}
+
+.acento:hover {
+  transform: scale(1.1);
+}
+
+.acento--aqui {
+  box-shadow: 0 0 0 2px var(--panel), 0 0 0 3.5px var(--ink);
+}
+
+/* ── The door ─────────────────────────────────────────────────────────────── */
+
+.dialogo--entrada {
+  gap: 0.75rem;
+}
+
+.entrada__marca {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 0.2rem;
+}
+
+.dialogo__texto--error {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--peligro);
 }
