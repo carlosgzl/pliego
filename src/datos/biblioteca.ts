@@ -26,6 +26,7 @@
 
 import { contarPalabras } from "@/nucleo/bloques";
 import { componer, descomponer, metaPorDefecto, type Meta } from "@/nucleo/libro";
+import { guardarEnCuenta, leerDeCuenta, mezclar } from "./cuenta";
 import { encolarCambio, escribirDoc, leerDoc, type ResultadoEscritura } from "./nube";
 import {
   borrarEnServidor,
@@ -40,7 +41,7 @@ const DOC_ESPEJO = "escritorio";
 const CACHE_LIBROS = "pliego.libros";
 const CACHE_RESCATE = "pliego.rescate";
 
-export type Via = "servidor" | "nube" | "local";
+export type Via = "servidor" | "cuenta" | "nube" | "local";
 
 export interface LibroResumen {
   slug: string;
@@ -176,6 +177,26 @@ export async function cargarCatalogo(): Promise<Catalogo> {
     };
   }
 
+  /*
+   * La cuenta, que es lo que hace que los dos ordenadores vean lo mismo.
+   *
+   * Va ANTES que la nube cifrada porque no necesita la clave de la biblioteca:
+   * basta con haber entrado. La nube sigue detrás para quien tenga la clave y
+   * quiera que sus libros acaben en los .md de Drive.
+   */
+  const enCuenta = await leerDeCuenta();
+  if (enCuenta && Object.keys(enCuenta.libros ?? {}).length > 0) {
+    const mezcla = mezclar(leerCache().libros, enCuenta.libros);
+    escribirCache({ libros: mezcla });
+    void guardarEnCuenta({ libros: mezcla });
+    return {
+      libros: ordenar(desdeEspejo({ libros: mezcla })),
+      via: "cuenta",
+      servidorVivo: false,
+      nubeViva: false,
+    };
+  }
+
   const doc = await leerDoc<Espejo>(DOC_ESPEJO);
   if (doc?.valor?.libros) {
     escribirCache(doc.valor);
@@ -253,12 +274,28 @@ export async function guardarLibro(slug: string, contenido: string): Promise<Res
 
   const enServidor = await guardarEnServidor(slug, contenido);
   const enNube = await subirEspejo(espejo, ahora);
+  /* La cuenta se actualiza SIEMPRE que haya sesión, responda quien responda:
+     es la copia que verá el otro ordenador, y es la barata de mantener. */
+  const enCuenta = await guardarEnCuenta({ libros: espejo.libros });
 
   if (enServidor) {
-    return { en: enNube === "ok" ? ["servidor", "nube"] : ["servidor"], enDisco: true };
+    const sitios: Via[] = ["servidor"];
+    if (enNube === "ok") {
+      sitios.push("nube");
+    }
+    if (enCuenta) {
+      sitios.push("cuenta");
+    }
+    return { en: sitios, enDisco: true };
   }
 
   const encolado = await encolarCambio("PUT", "/writing/book", { slug, content: contenido });
+  if (enCuenta) {
+    return {
+      en: enNube === "ok" ? ["cuenta", "nube"] : ["cuenta"],
+      enDisco: encolado,
+    };
+  }
   if (enNube === "ok" || encolado) {
     return {
       en: ["nube"],

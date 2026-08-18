@@ -24,6 +24,7 @@ import { componer, type Meta } from "@/nucleo/libro";
 import { numeroCapituloDe } from "@/nucleo/pagina";
 import { avisar } from "@/ui/Avisos";
 import { Icono } from "@/ui/Icono";
+import { useSalida } from "@/ui/useSalida";
 
 export function Exportar({
   meta,
@@ -36,6 +37,9 @@ export function Exportar({
   slug: string;
   onCerrar: () => void;
 }) {
+  /* El panel se queda montado mientras se desliza hacia fuera. */
+  const salida = useSalida(true, onCerrar);
+
   const [copiando, setCopiando] = useState(false);
 
   const bajar = (contenido: string, nombre: string, tipo: string) => {
@@ -64,10 +68,14 @@ export function Exportar({
   const plano = textoPlano(cuerpo);
 
   return (
-    <aside className="panel" aria-label="Exportar">
+    <aside
+      className={`panel${salida.cerrando ? " panel--cerrando" : ""}`}
+      aria-label="Exportar"
+      onAnimationEnd={salida.alTerminar}
+    >
       <div className="panel__cabeza">
         <span className="panel__titulo">Exportar</span>
-        <button type="button" className="boton boton--desnudo" onClick={onCerrar} title="Cerrar">
+        <button type="button" className="boton boton--desnudo" onClick={salida.cerrar} title="Cerrar">
           <Icono nombre="cerrar" />
         </button>
       </div>

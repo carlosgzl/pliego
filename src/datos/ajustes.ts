@@ -72,6 +72,15 @@ export interface Ajustes {
   capitulos: boolean;
   /** Type-as-you-go typographic replacements («», —, …). */
   tipografia: boolean;
+  /**
+   * El corrector del navegador, encendido o apagado.
+   *
+   * Se usa el del sistema y no uno propio a propósito: trae el diccionario de
+   * español del usuario, sus palabras añadidas y el menú de sugerencias del
+   * botón derecho. Un corrector escrito aquí sería peor y pesaría megas.
+   * Apagable porque a mucha gente el subrayado rojo le corta el hilo.
+   */
+  corrector: boolean;
   /** Warn before leaving with unsaved text. */
   avisarSalida: boolean;
 }
@@ -93,6 +102,7 @@ export const AJUSTES_POR_DEFECTO: Ajustes = {
   sitioGadgets: "abajo",
   capitulos: false,
   tipografia: true,
+  corrector: true,
   avisarSalida: true,
 };
 

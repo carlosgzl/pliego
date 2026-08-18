@@ -19,6 +19,7 @@ import { palabrasDeHoy } from "@/datos/ajustes";
 import { minutosDeLectura } from "@/nucleo/bloques";
 import { DialogoConfirmar, DialogoTexto } from "@/ui/Dialogo";
 import { Icono } from "@/ui/Icono";
+import { Pie } from "@/ui/Pie";
 import { Portada } from "./Portada";
 
 export function Inicio({
@@ -66,6 +67,7 @@ export function Inicio({
             <span className="marca__nombre">
               Pliego<span className="marca__punto">.</span>
             </span>
+            <span className="marca__beta">beta</span>
             <span className="eyebrow">{saludo()}</span>
           </div>
 
@@ -197,6 +199,8 @@ export function Inicio({
           )}
         </section>
       </div>
+
+      <Pie />
 
       {creando && (
         <DialogoTexto
@@ -383,11 +387,14 @@ function Obra({
 
 const TEXTO_ORIGEN: Record<Catalogo["via"], string> = {
   servidor: "Guardando en tu ordenador",
+  cuenta: "Guardando en tu cuenta",
   nube: "Guardando en la nube",
   local: "Solo en este navegador",
 };
 
 const EXPLICA_ORIGEN: Record<Catalogo["via"], string> = {
+  cuenta:
+    "Tus libros están en tu cuenta: entra con ella en cualquier ordenador y los tendrás ahí.",
   servidor:
     "El ordenador está encendido y responde: los libros se escriben en los archivos de verdad, en Drive.",
   nube: "El ordenador no responde. Se escribe en la nube cifrada y el ordenador lo aplicará a los archivos cuando vuelva.",

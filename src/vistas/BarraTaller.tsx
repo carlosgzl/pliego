@@ -21,12 +21,15 @@
  */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Ayuda } from "@/ui/Ayuda";
 import { Icono, type NombreIcono } from "@/ui/Icono";
 
 export interface Accion {
   clave: string;
   nombre: string;
   icono: NombreIcono;
+  /** Una frase para quien no sepa qué es. Sale al quedarse encima. */
+  ayuda?: string;
   atajo?: string;
   /** Un interruptor pintado como activo cuando lo está. */
   puesto?: boolean;
@@ -87,27 +90,37 @@ export function MenuBarra({
 
       {abierto && (
         <div className="menu__lista" role="menu">
-          {acciones.map((accion) => (
-            <button
-              key={accion.clave}
-              type="button"
-              role="menuitem"
-              className={`menu__opcion${accion.puesto ? " menu__opcion--puesta" : ""}`}
-              onClick={() => {
-                accion.hacer();
-                setAbierto(false);
-              }}
-            >
-              <Icono nombre={accion.icono} tamano={15} />
-              <span className="menu__nombre">{accion.nombre}</span>
-              {accion.atajo && <kbd className="menu__atajo">{accion.atajo}</kbd>}
-              {accion.puesto && (
-                <span className="menu__marca">
-                  <Icono nombre="guardado" tamano={13} />
-                </span>
-              )}
-            </button>
-          ))}
+          {acciones.map((accion) => {
+            const boton = (
+              <button
+                type="button"
+                role="menuitem"
+                className={`menu__opcion${accion.puesto ? " menu__opcion--puesta" : ""}`}
+                onClick={() => {
+                  accion.hacer();
+                  setAbierto(false);
+                }}
+              >
+                <Icono nombre={accion.icono} tamano={15} />
+                <span className="menu__nombre">{accion.nombre}</span>
+                {accion.atajo && <kbd className="menu__atajo">{accion.atajo}</kbd>}
+                {accion.puesto && (
+                  <span className="menu__marca">
+                    <Icono nombre="guardado" tamano={13} />
+                  </span>
+                )}
+              </button>
+            );
+            return accion.ayuda ? (
+              <Ayuda key={accion.clave} texto={accion.ayuda}>
+                {boton}
+              </Ayuda>
+            ) : (
+              <span key={accion.clave} className="menu__fila">
+                {boton}
+              </span>
+            );
+          })}
         </div>
       )}
     </div>

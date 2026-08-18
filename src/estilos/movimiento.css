@@ -198,3 +198,92 @@
 .pantalla--taller {
   animation: surgir var(--calmo) var(--sale);
 }
+
+/* ── Salidas ──────────────────────────────────────────────────────────────── */
+
+/*
+ * Lo que se va, se va animado.
+ *
+ * Las entradas estaban y las salidas no: se cerraba un panel y desaparecía en
+ * un fotograma. La clase `--cerrando` la pone `useSalida`, que mantiene el
+ * elemento montado hasta que la animación termina de verdad.
+ *
+ * Las salidas son MÁS RÁPIDAS que las entradas y con otra curva. No es un
+ * capricho: al abrir estás esperando algo y el movimiento largo se disfruta; al
+ * cerrar ya has decidido, y cualquier demora se siente como que la aplicación
+ * va lenta. Entrar con calma, salir sin ceremonia.
+ */
+@keyframes salir-derecha {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes salir-izquierda {
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes salir-abajo {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes desvanecer {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes menguar {
+  to {
+    opacity: 0;
+    transform: scale(0.97) translateY(4px);
+  }
+}
+
+@keyframes hundir {
+  to {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.panel--cerrando {
+  animation: salir-derecha var(--normal) var(--entra) forwards;
+}
+
+.panel--izquierda.panel--cerrando {
+  animation-name: salir-izquierda;
+}
+
+.panel-velo--cerrando,
+.velo--cerrando {
+  animation: desvanecer var(--normal) var(--entra) forwards;
+}
+
+.dialogo--cerrando {
+  animation: menguar var(--veloz) var(--entra) forwards;
+}
+
+.capitulos--cerrando {
+  animation: salir-izquierda var(--normal) var(--entra) forwards;
+}
+
+.previa--cerrando {
+  animation: desvanecer var(--veloz) var(--entra) forwards;
+}
+
+.menu__lista--cerrando {
+  animation: menguar var(--veloz) var(--entra) forwards;
+}
+
+.aviso--cerrando {
+  animation: hundir var(--veloz) var(--entra) forwards;
+}
+
+.pantalla--cerrando {
+  animation: desvanecer var(--veloz) var(--entra) forwards;
+}

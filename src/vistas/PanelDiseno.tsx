@@ -20,6 +20,7 @@
  */
 
 import { useRef, useState, type ChangeEvent } from "react";
+import { useSalida } from "@/ui/useSalida";
 import { FUENTES, GRUPOS_FUENTE, pilaDe } from "@/nucleo/fuentes";
 import { FORMATOS, MARGENES, juzgarMedida, medidaEnCaracteres } from "@/nucleo/geometria";
 import type { Diseno, Meta, Portada as TipoPortada } from "@/nucleo/libro";
@@ -50,6 +51,9 @@ export function PanelDiseno({
   onCerrar: () => void;
 }) {
   const [pestana, setPestana] = useState<Pestana>("estilo");
+  /* Cerrar tiene que verse tanto como abrir: el panel se queda montado
+     mientras se desliza hacia fuera. Ver `ui/useSalida.ts`. */
+  const salida = useSalida(true, onCerrar);
 
   const cambiarDiseno = (cambios: Partial<Diseno>) => {
     const diseno = { ...meta.diseno, ...cambios };
@@ -68,15 +72,23 @@ export function PanelDiseno({
       {/* On a phone the panel is the whole screen. It used to be 88 % of it,
           and the strip of app left showing down the left-hand side — half of
           the page preview, cut off — read as a frame that meant nothing. */}
-      <div className="panel-velo" onClick={onCerrar} role="presentation" />
+      <div
+        className={`panel-velo${salida.cerrando ? " panel-velo--cerrando" : ""}`}
+        onClick={salida.cerrar}
+        role="presentation"
+      />
 
-      <aside className="panel" aria-label="Diseño del libro">
+      <aside
+        className={`panel${salida.cerrando ? " panel--cerrando" : ""}`}
+        aria-label="Diseño del libro"
+        onAnimationEnd={salida.alTerminar}
+      >
         <div className="panel__cabeza">
           <span className="panel__titulo">Diseño del libro</span>
           <button
             type="button"
             className="boton boton--desnudo"
-            onClick={onCerrar}
+            onClick={salida.cerrar}
             aria-label="Cerrar el diseño"
           >
             <Icono nombre="cerrar" />

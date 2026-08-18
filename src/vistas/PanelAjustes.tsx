@@ -25,6 +25,7 @@ import { leerRescates, olvidarRescate } from "@/datos/biblioteca";
 import { avisar } from "@/ui/Avisos";
 import { ACENTOS } from "@/ui/acento";
 import { Icono } from "@/ui/Icono";
+import { useSalida } from "@/ui/useSalida";
 
 export function PanelAjustes({
   ajustes,
@@ -40,6 +41,9 @@ export function PanelAjustes({
   onCerrar: () => void;
   onRecargar: () => void;
 }) {
+  /* El panel se queda montado mientras se desliza hacia fuera. */
+  const salida = useSalida(true, onCerrar);
+
   const [clave, setClave] = useState(leerClave() ?? "");
   const [direccion, setDireccion] = useState(direccionGuardada() ?? "");
   const [nube, setNube] = useState<EstadoNube | "probando" | null>(null);
@@ -60,10 +64,14 @@ export function PanelAjustes({
   };
 
   return (
-    <aside className="panel" aria-label="Ajustes">
+    <aside
+      className={`panel${salida.cerrando ? " panel--cerrando" : ""}`}
+      aria-label="Ajustes"
+      onAnimationEnd={salida.alTerminar}
+    >
       <div className="panel__cabeza">
         <span className="panel__titulo">Ajustes</span>
-        <button type="button" className="boton boton--desnudo" onClick={onCerrar} title="Cerrar">
+        <button type="button" className="boton boton--desnudo" onClick={salida.cerrar} title="Cerrar">
           <Icono nombre="cerrar" />
         </button>
       </div>

@@ -398,15 +398,37 @@ export function Taller({
       clave: "foco",
       nombre: "Modo foco",
       icono: "foco",
+      ayuda:
+        "Apaga todo el texto menos el párrafo en el que estás escribiendo. Lo demás sigue ahí, solo que en gris, para que la vista no se te vaya a lo que ya has escrito.",
       puesto: ajustes.foco,
       hacer: () => onAjustes({ ...ajustes, foco: !ajustes.foco }),
     },
     {
       clave: "maquina",
-      nombre: "Scroll de máquina de escribir",
+      nombre: "Escribir en el centro",
       icono: "flecha",
+      ayuda:
+        "La línea que escribes se queda siempre a media pantalla en lugar de bajar hasta el borde, como el rodillo de una máquina de escribir.",
       puesto: ajustes.maquina,
       hacer: () => onAjustes({ ...ajustes, maquina: !ajustes.maquina }),
+    },
+    {
+      clave: "corrector",
+      nombre: "Corrector ortográfico",
+      icono: "guardado",
+      ayuda:
+        "Subraya en rojo las palabras mal escritas usando el diccionario de español de tu navegador. Con el botón derecho encima te propone la corrección.",
+      puesto: ajustes.corrector,
+      hacer: () => onAjustes({ ...ajustes, corrector: !ajustes.corrector }),
+    },
+    {
+      clave: "tipografia",
+      nombre: "Comillas y rayas automáticas",
+      icono: "cursiva",
+      ayuda:
+        "Escribe tres puntos y salen puntos suspensivos de verdad; dos guiones, una raya de diálogo; << y >>, comillas españolas.",
+      puesto: ajustes.tipografia,
+      hacer: () => onAjustes({ ...ajustes, tipografia: !ajustes.tipografia }),
     },
   ];
 
@@ -441,6 +463,8 @@ export function Taller({
     },
     {
       clave: "gadgets",
+      ayuda:
+        "La franja con las cuentas —palabras, lo escrito hoy, la página, el cronómetro—. Se elige cuáles salen en Ajustes.",
       nombre:
         ajustes.sitioGadgets === "oculta"
           ? "Enseñar los gadgets"
@@ -580,7 +604,7 @@ export function Taller({
                 ref={area}
                 className="manuscrito__area"
                 value={cuerpo}
-                spellCheck
+                spellCheck={ajustes.corrector}
                 lang="es"
                 placeholder="Empieza por la primera frase. Lo demás viene detrás."
                 style={tipoEditor}

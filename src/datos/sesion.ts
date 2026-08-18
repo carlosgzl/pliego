@@ -87,10 +87,23 @@ export type ResultadoEntrada =
  */
 const PUERTA = import.meta.env.DEV ? "https://pliego-cga.netlify.app" : "";
 
+/** Crear cuenta. Mismo trato que entrar: si sale bien, ya estás dentro. */
+export async function registrar(usuario: string, clave: string): Promise<ResultadoEntrada> {
+  return llamar("registrar", usuario, clave);
+}
+
 export async function entrar(usuario: string, clave: string): Promise<ResultadoEntrada> {
+  return llamar("entrar", usuario, clave);
+}
+
+async function llamar(
+  ruta: "entrar" | "registrar",
+  usuario: string,
+  clave: string,
+): Promise<ResultadoEntrada> {
   let respuesta: Response;
   try {
-    respuesta = await fetch(`${PUERTA}/api/auth/entrar`, {
+    respuesta = await fetch(`${PUERTA}/api/auth/${ruta}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ usuario, clave }),
@@ -99,11 +112,15 @@ export async function entrar(usuario: string, clave: string): Promise<ResultadoE
     return { ok: false, motivo: "No hay conexión con el servidor." };
   }
 
-  if (respuesta.status === 503) {
-    return { ok: false, motivo: "La puerta no está configurada en el servidor." };
-  }
   if (!respuesta.ok) {
-    return { ok: false, motivo: "Usuario o contraseña incorrectos." };
+    /* El servidor ya explica qué ha pasado —el usuario existe, la contraseña es
+       corta, el almacén no está—: repetirlo aquí en genérico solo empeora el
+       mensaje. Se usa el suyo y se guarda uno de reserva por si no manda nada. */
+    const datos = (await respuesta.json().catch(() => null)) as { error?: string } | null;
+    return {
+      ok: false,
+      motivo: datos?.error ?? "No se ha podido completar. Inténtalo otra vez.",
+    };
   }
 
   const datos = (await respuesta.json()) as { token?: string; expira?: number };

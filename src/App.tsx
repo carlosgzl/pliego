@@ -27,6 +27,7 @@ import { libroDeMuestra, SLUG_MUESTRA } from "@/datos/muestra";
 import { alCambiarSesion, hayEntrado, revisarSesion, salir } from "@/datos/sesion";
 import { aplicarAcento } from "@/ui/acento";
 import { avisar, Avisos } from "@/ui/Avisos";
+import { SelectorColor } from "@/ui/Pie";
 import { Entrada } from "@/vistas/Entrada";
 import { Inicio } from "@/vistas/Inicio";
 import { PanelAjustes } from "@/vistas/PanelAjustes";
@@ -193,6 +194,10 @@ export function App() {
     return (
       <div className="app">
         <Entrada onEntrado={() => setDentro(true)} onVisita={() => setVisita(true)} />
+        <SelectorColor
+          valor={ajustes.acento}
+          onCambiar={(acento) => cambiarAjustes({ ...ajustes, acento })}
+        />
         <Avisos />
       </div>
     );
@@ -244,6 +249,10 @@ export function App() {
           )}
         </div>
       )}
+      <SelectorColor
+        valor={ajustes.acento}
+        onCambiar={(acento) => cambiarAjustes({ ...ajustes, acento })}
+      />
       <Avisos />
     </div>
   );

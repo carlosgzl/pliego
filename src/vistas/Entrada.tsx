@@ -16,7 +16,7 @@
  */
 
 import { useState, type FormEvent } from "react";
-import { entrar } from "@/datos/sesion";
+import { entrar, registrar } from "@/datos/sesion";
 import { avisar } from "@/ui/Avisos";
 import { Icono } from "@/ui/Icono";
 
@@ -27,19 +27,21 @@ export function Entrada({
   onEntrado: () => void;
   onVisita: () => void;
 }) {
+  const [modo, setModo] = useState<"entrar" | "crear">("entrar");
   const [usuario, setUsuario] = useState("");
   const [clave, setClave] = useState("");
   const [entrando, setEntrando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const creando = modo === "crear";
 
   const enviar = async (evento: FormEvent) => {
     evento.preventDefault();
     setEntrando(true);
     setError(null);
-    const resultado = await entrar(usuario, clave);
+    const resultado = creando ? await registrar(usuario, clave) : await entrar(usuario, clave);
     setEntrando(false);
     if (resultado.ok) {
-      avisar("Dentro.");
+      avisar(creando ? "Cuenta creada. Bienvenido." : "Dentro.");
       onEntrado();
     } else {
       setError(resultado.motivo);
@@ -81,9 +83,33 @@ export function Entrada({
 
       <section className="puerta__cruz">
         <form className="puerta__forma" onSubmit={(evento) => void enviar(evento)}>
-          <h2 className="puerta__titulo">Entra a escribir</h2>
+          <div className="segmentado puerta__modos">
+            <button
+              type="button"
+              className={`segmentado__opcion${!creando ? " segmentado__opcion--aqui" : ""}`}
+              onClick={() => {
+                setModo("entrar");
+                setError(null);
+              }}
+            >
+              Entrar
+            </button>
+            <button
+              type="button"
+              className={`segmentado__opcion${creando ? " segmentado__opcion--aqui" : ""}`}
+              onClick={() => {
+                setModo("crear");
+                setError(null);
+              }}
+            >
+              Crear cuenta
+            </button>
+          </div>
+
           <p className="puerta__nota">
-            Hace falta para abrir tu biblioteca y para guardar. Mirar cómo funciona, no.
+            {creando
+              ? "Con una cuenta tus libros te siguen: entra con ella en otro ordenador y están todos ahí. Es gratis y no pide correo."
+              : "Hace falta para abrir tus libros y para guardar. Mirar cómo funciona, no."}
           </p>
 
           <label className="campo">
@@ -93,6 +119,7 @@ export function Entrada({
               value={usuario}
               autoComplete="username"
               autoFocus
+              placeholder={creando ? "de 3 a 32 letras, números o guiones" : ""}
               onChange={(evento) => setUsuario(evento.target.value)}
             />
           </label>
@@ -103,7 +130,8 @@ export function Entrada({
               className="entrada"
               type="password"
               value={clave}
-              autoComplete="current-password"
+              autoComplete={creando ? "new-password" : "current-password"}
+              placeholder={creando ? "ocho caracteres como mínimo" : ""}
               onChange={(evento) => setClave(evento.target.value)}
             />
           </label>
@@ -119,7 +147,7 @@ export function Entrada({
             className="boton boton--principal puerta__boton"
             disabled={entrando || !usuario.trim() || !clave}
           >
-            {entrando ? "Entrando…" : "Entrar"}
+            {entrando ? (creando ? "Creando…" : "Entrando…") : creando ? "Crear mi cuenta" : "Entrar"}
           </button>
 
           <button type="button" className="puerta__visita" onClick={onVisita}>
@@ -127,9 +155,8 @@ export function Entrada({
           </button>
 
           <p className="campo__nota">
-            Tu contraseña no se guarda en ningún sitio: el servidor solo tiene un resumen del que no
-            se puede volver atrás. Y aunque alguien entrara, tus libros seguirían cifrados con una
-            clave que nunca sale de este navegador.
+            Tu contraseña no se guarda en ningún sitio: el servidor solo tiene un resumen (scrypt)
+            del que no se puede volver atrás. Sin correo, sin verificación y sin terceros.
           </p>
         </form>
       </section>

@@ -27,18 +27,33 @@
   color: var(--tenue);
 }
 
+/*
+ * El texto de los botones bailaba un par de píxeles por debajo del icono.
+ *
+ * La causa: el botón heredaba `line-height: 1.5` del body y el SVG no tiene
+ * línea, así que `align-items: center` centraba la CAJA de texto —que incluye
+ * el medio interlineado de arriba y de abajo— contra un icono que ocupa
+ * exactamente su alto. Poniendo `line-height: 1` en el botón, la caja del texto
+ * mide lo que miden las letras y los dos quedan a la misma altura.
+ */
 .boton {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem;
-  padding: 0.4rem 0.7rem;
+  padding: 0.42rem 0.7rem;
   border: 1px solid var(--linea);
   border-radius: var(--radio);
   background: var(--panel);
   color: var(--ink-suave);
   font-size: 0.8rem;
+  line-height: 1;
   transition: border-color var(--paso), color var(--paso), background var(--paso);
   white-space: nowrap;
+}
+
+.boton > * {
+  line-height: 1;
 }
 
 .boton:hover {
@@ -749,20 +764,40 @@
 
 /* ── Panels (design, cover, export) ───────────────────────────────────────── */
 
+/*
+ * El panel va SIEMPRE pegado al borde derecho, flotando.
+ *
+ * Antes era un hijo más de `.cuerpo`, así que heredaba su dirección: con la
+ * página compuesta abajo, `.cuerpo` es una columna y el panel de diseño se
+ * abría DEBAJO, apretado en la esquina inferior izquierda. Él lo describió como
+ * «horrible y espantoso» y no le faltaba razón. Sacándolo del flujo, se abre en
+ * el mismo sitio con la página a la derecha, a la izquierda, abajo o escondida.
+ */
 .panel {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-end: 0;
+  z-index: 45;
   width: 23rem;
   max-width: 92vw;
-  flex: none;
   border-left: 1px solid var(--linea);
   background: var(--panel);
   display: flex;
   flex-direction: column;
   min-height: 0;
+  box-shadow: -18px 0 48px -24px rgb(0 0 0 / 30%);
 }
 
-/* Only shown on a phone, where the panel is the whole screen. */
+/*
+ * En el escritorio el velo solo sirve para cerrar al pinchar fuera: no oscurece
+ * nada. Oscurecer la pantalla mientras tocas el diseño esconde justo lo que
+ * estás mirando. En el móvil sí tapa, porque allí el panel ocupa todo.
+ */
 .panel-velo {
-  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 44;
+  background: transparent;
 }
 
 .panel__cabeza {
@@ -1764,4 +1799,210 @@
   max-height: 19rem;
   overflow: auto;
   padding-right: 2px;
+}
+
+/* ── Paleta flotante y pie ────────────────────────────────────────────────── */
+
+/*
+ * El selector de color vive abajo a la derecha, flotando sobre todo.
+ *
+ * `position: fixed` y no dentro del pie: se quiere a mano en cualquier
+ * pantalla, también dentro del taller, donde no hay pie ninguno.
+ */
+.paleta {
+  position: fixed;
+  inset-block-end: 1rem;
+  inset-inline-end: 1rem;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.paleta__tirador {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  border: 1px solid var(--linea);
+  background: var(--panel);
+  box-shadow: 0 6px 20px -8px rgb(0 0 0 / 30%);
+  transition: transform var(--normal) var(--sale), border-color var(--veloz) var(--sale);
+}
+
+.paleta__tirador:hover {
+  transform: scale(1.08);
+  border-color: var(--acento);
+}
+
+.paleta__punto {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  background: var(--acento);
+}
+
+.paleta__ramo {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--linea);
+  background: var(--panel);
+  box-shadow: 0 10px 30px -12px rgb(0 0 0 / 34%);
+  animation: crecer var(--normal) var(--resorte);
+  transform-origin: right center;
+}
+
+/* El pie: solo en las pantallas de estar, nunca dentro del taller. */
+.pie {
+  border-top: 1px solid var(--linea);
+  background: var(--panel);
+  margin-top: 3rem;
+}
+
+.pie__dentro {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 2.25rem 1.5rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.pie__marca {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.pie__nombre {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.pie__beta {
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--acento);
+  border-radius: 999px;
+  background: var(--acento-tenue);
+  color: var(--acento-ink);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.pie__que {
+  margin: 0;
+  max-width: 40rem;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--tenue);
+}
+
+.pie__firma {
+  margin: 0.3rem 0 0;
+  font-size: 0.82rem;
+  color: var(--ink-suave);
+}
+
+.pie__firma strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.pie__firma a {
+  color: var(--acento-ink);
+  text-underline-offset: 2px;
+}
+
+.pie__sep {
+  margin: 0 0.5rem;
+  color: var(--linea-fuerte);
+}
+
+.pie__aviso {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.4rem 0 0;
+  font-size: 0.76rem;
+  line-height: 1.55;
+  color: var(--tenue);
+}
+
+.pie__aviso svg {
+  flex: none;
+  color: var(--acento);
+}
+
+/* El mismo sello de beta, pequeño, junto al logotipo de la cabecera. */
+.marca__beta {
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--linea-fuerte);
+  border-radius: 999px;
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
+
+.puerta__modos {
+  margin-bottom: 0.2rem;
+}
+
+/* ── Explicaciones al pasar el ratón ──────────────────────────────────────── */
+
+.ayuda {
+  position: relative;
+  display: inline-flex;
+}
+
+.ayuda__globo {
+  position: absolute;
+  left: 50%;
+  z-index: 70;
+  width: max-content;
+  max-width: 17rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--radio);
+  background: var(--ink);
+  color: var(--ground);
+  font-size: 0.74rem;
+  font-weight: 400;
+  line-height: 1.45;
+  text-align: left;
+  white-space: normal;
+  box-shadow: 0 10px 28px -12px rgb(0 0 0 / 45%);
+  /* No debe interceptar el ratón: si lo hiciera, aparecer bajo el cursor
+     dispararía un «pointerleave» del botón y el globo parpadearía. */
+  pointer-events: none;
+  animation: crecer var(--veloz) var(--sale);
+}
+
+.ayuda__globo--abajo {
+  top: calc(100% + 7px);
+  transform: translateX(-50%);
+  transform-origin: top center;
+}
+
+.ayuda__globo--arriba {
+  bottom: calc(100% + 7px);
+  transform: translateX(-50%);
+  transform-origin: bottom center;
+}
+
+/* Cada fila del menú ocupa todo el ancho, envuelta o no en una ayuda. */
+.menu__fila,
+.menu__lista .ayuda {
+  display: block;
+}
+
+.menu__lista .menu__opcion {
+  width: 100%;
 }
