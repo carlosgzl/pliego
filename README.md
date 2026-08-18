@@ -1,10 +1,10 @@
-# Scriptorium
+# Pliego
 
 Un sitio para escribir libros. Escribes arriba y las páginas se componen debajo,
 con tu tipografía, tus márgenes y tu portada — y lo que sale es un libro, no un
 documento.
 
-**En internet:** https://scriptorium-cga.netlify.app
+**En internet:** https://pliego-cga.netlify.app
 **Comparte biblioteca con:** [Alexandria](https://github.com/carlosgzl/alexandria)
 
 ---
@@ -52,7 +52,7 @@ en medio de una novela.
 
 ## Dónde se guarda: la API compartida
 
-Scriptorium no tiene servidor propio. Usa **la API de Alexandria**, que es lo
+Pliego no tiene servidor propio. Usa **la API de Alexandria**, que es lo
 que hace que las dos aplicaciones miren la misma biblioteca en vez de dos copias.
 
 | Dónde | Qué es | Cuándo responde |
@@ -87,7 +87,7 @@ el formato es un **contrato**:
 - un lector que no conoce un campo tiene que poder componer el libro igual.
 
 Las claves de tipografía (`fuente`) son las mismas en las dos aplicaciones. Las
-que Scriptorium añade de más caen en la fuente por defecto al abrirse en
+que Pliego añade de más caen en la fuente por defecto al abrirse en
 Alexandria, que es degradar bien.
 
 ## Empezar
