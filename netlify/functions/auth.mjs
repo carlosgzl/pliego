@@ -68,25 +68,28 @@ function contexto() {
   }
   try {
     const ctx = JSON.parse(Buffer.from(crudo, "base64").toString("utf8"));
-    return ctx?.token && ctx?.siteID && (ctx.edgeURL || ctx.apiURL) ? ctx : null;
+    return ctx?.token && ctx?.siteID && (ctx.uncachedEdgeURL || ctx.edgeURL) ? ctx : null;
   } catch {
     return null;
   }
 }
 
 /**
- * La dirección de un blob.
+ * La dirección de un blob. Dos detalles que costaron una tanda de pruebas.
  *
- * El contexto trae `edgeURL` (el borde, que es el rápido) y `apiURL` (la API,
- * de reserva). NO trae `url`: darlo por hecho costó un 502 con «Failed to parse
- * URL from undefined». Se prefiere el borde y se cae a la API si no viene.
+ * 1. `uncachedEdgeURL`, NO `edgeURL`. El borde con caché es de consistencia
+ *    eventual: se crea una cuenta, se lee un segundo después y no está. Justo
+ *    lo que pasaba — el registro decía «creada» y entrar acto seguido fallaba,
+ *    y un libro guardado volvía vacío. Para un almacén de cuentas eso no vale.
+ * 2. El prefijo `site:`. Sin él el almacén es del DESPLIEGUE, así que cada vez
+ *    que se sube un cambio se estrena almacén vacío y desaparecen las cuentas.
+ *    Con `site:` el almacén es del sitio y sobrevive a los despliegues.
  *
- * La barra de la clave se codifica: `u/carlos` tiene que llegar como un solo
- * nombre de blob y no como dos tramos de ruta.
+ * Es la misma lección que ya está aprendida en `nube.mjs` de Alexandria.
  */
 function direccion(ctx, clave) {
-  const base = ctx.edgeURL ?? ctx.apiURL;
-  return `${base}/${ctx.siteID}/${ALMACEN}/${encodeURIComponent(clave)}`;
+  const base = ctx.uncachedEdgeURL ?? ctx.edgeURL;
+  return new URL(`/${ctx.siteID}/site:${ALMACEN}/${encodeURIComponent(clave)}`, base).toString();
 }
 
 async function leerBlob(clave) {
