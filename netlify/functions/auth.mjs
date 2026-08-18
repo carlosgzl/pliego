@@ -67,14 +67,26 @@ function contexto() {
     return null;
   }
   try {
-    return JSON.parse(Buffer.from(crudo, "base64").toString("utf8"));
+    const ctx = JSON.parse(Buffer.from(crudo, "base64").toString("utf8"));
+    return ctx?.token && ctx?.siteID && (ctx.edgeURL || ctx.apiURL) ? ctx : null;
   } catch {
     return null;
   }
 }
 
+/**
+ * La dirección de un blob.
+ *
+ * El contexto trae `edgeURL` (el borde, que es el rápido) y `apiURL` (la API,
+ * de reserva). NO trae `url`: darlo por hecho costó un 502 con «Failed to parse
+ * URL from undefined». Se prefiere el borde y se cae a la API si no viene.
+ *
+ * La barra de la clave se codifica: `u/carlos` tiene que llegar como un solo
+ * nombre de blob y no como dos tramos de ruta.
+ */
 function direccion(ctx, clave) {
-  return `${ctx.url}/${ctx.siteID}/${ALMACEN}/${encodeURIComponent(clave)}`;
+  const base = ctx.edgeURL ?? ctx.apiURL;
+  return `${base}/${ctx.siteID}/${ALMACEN}/${encodeURIComponent(clave)}`;
 }
 
 async function leerBlob(clave) {
