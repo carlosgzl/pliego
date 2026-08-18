@@ -1,0 +1,960 @@
+/*
+ * The room: shelf, bars, panels, drawers.
+ *
+ * Everything here is deliberately quiet. The rule the whole file obeys is that
+ * NOTHING competes with the paper — no filled buttons except the one primary
+ * action per screen, no shadows, no colour that is not either the ink or the
+ * single accent. When you are writing, the only thing that should catch the eye
+ * is the sentence you are writing.
+ */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh; /* not 100vh: on a phone that is the screen with the browser
+                     bar hidden, and the bottom strip becomes unreachable */
+  overflow: hidden;
+  background: var(--ground);
+}
+
+/* ── Small shared pieces ──────────────────────────────────────────────────── */
+
+.eyebrow {
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  background: var(--panel);
+  color: var(--ink-suave);
+  font-size: 0.8rem;
+  transition: border-color var(--paso), color var(--paso), background var(--paso);
+  white-space: nowrap;
+}
+
+.boton:hover {
+  border-color: var(--linea-fuerte);
+  color: var(--ink);
+}
+
+.boton[aria-pressed="true"] {
+  background: var(--acento-tenue);
+  border-color: var(--acento);
+  color: var(--acento-ink);
+}
+
+.boton--principal {
+  background: var(--acento);
+  border-color: var(--acento);
+  color: #fff;
+  font-weight: 500;
+}
+
+.boton--principal:hover {
+  background: var(--acento-ink);
+  border-color: var(--acento-ink);
+  color: #fff;
+}
+
+.boton--peligro:hover {
+  border-color: var(--peligro);
+  color: var(--peligro);
+}
+
+.boton--desnudo {
+  border-color: transparent;
+  background: none;
+}
+
+.boton--desnudo:hover {
+  background: var(--panel-alto);
+  border-color: var(--linea);
+}
+
+.boton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.icono {
+  display: inline-flex;
+  flex: none;
+}
+
+/* ── Shelf ────────────────────────────────────────────────────────────────── */
+
+.estanteria {
+  flex: 1;
+  overflow: auto;
+}
+
+.estanteria__dentro {
+  max-width: 66rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.marca {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.marca__nombre {
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.marca__punto {
+  color: var(--acento);
+}
+
+.cabecera {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.cabecera__texto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.cabecera__linea {
+  font-size: 0.82rem;
+  color: var(--tenue);
+}
+
+.rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 1.75rem 1.5rem;
+}
+
+.obra {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  text-align: left;
+  align-items: stretch;
+}
+
+.obra__portada {
+  transition: transform var(--paso);
+}
+
+.obra:hover .obra__portada {
+  transform: translateY(-3px);
+}
+
+.obra__titulo {
+  font-size: 0.86rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.obra__pie {
+  font-size: 0.72rem;
+  color: var(--tenue);
+}
+
+.vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 4rem 1.5rem;
+  border: 1px dashed var(--linea-fuerte);
+  border-radius: var(--radio-grande);
+  text-align: center;
+}
+
+.vacio__titulo {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.vacio__texto {
+  max-width: 30rem;
+  font-size: 0.85rem;
+  line-height: 1.65;
+  color: var(--tenue);
+}
+
+/* ── Where the books are coming from ──────────────────────────────────────── */
+
+.origen {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  background: var(--panel);
+  font-size: 0.76rem;
+  color: var(--tenue);
+}
+
+.origen__punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--tenue);
+}
+
+.origen__punto--servidor {
+  background: var(--bien);
+}
+
+.origen__punto--nube {
+  background: var(--acento);
+}
+
+.origen__punto--local {
+  background: var(--peligro);
+}
+
+/* ── Workshop ─────────────────────────────────────────────────────────────── */
+
+.taller {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.barra {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--linea);
+  background: var(--panel);
+  flex: none;
+  min-height: 3rem;
+}
+
+.barra__titulo {
+  font-size: 0.85rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.barra__hueco {
+  flex: 1;
+  min-width: 0;
+}
+
+.barra__cuenta {
+  font-size: 0.74rem;
+  color: var(--tenue);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.guardado {
+  font-size: 0.72rem;
+  color: var(--tenue);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.guardado--aviso {
+  color: var(--peligro);
+}
+
+.cuerpo {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.cuerpo--lado {
+  flex-direction: row;
+}
+
+.cuerpo--abajo {
+  flex-direction: column;
+}
+
+/* ── The manuscript ───────────────────────────────────────────────────────── */
+
+.manuscrito {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  background: var(--ground);
+  display: flex;
+  justify-content: center;
+}
+
+.manuscrito__caja {
+  width: 100%;
+  padding: 3rem 1.5rem 40vh; /* the tail is what lets the last line sit
+                                mid-screen instead of glued to the bottom */
+}
+
+/* The textarea and its mirror stack in here, and MUST share every metric. */
+.manuscrito__pila {
+  position: relative;
+}
+
+.manuscrito__area,
+.manuscrito__espejo {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  width: 100%;
+  font: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: normal;
+  tab-size: 4;
+}
+
+.manuscrito__area {
+  display: block;
+  position: relative;
+  z-index: 1;
+  background: none;
+  resize: none;
+  outline: none;
+  color: var(--ink);
+  overflow: hidden; /* the scroller is the container, so the caret never
+                       fights two scrollbars */
+  caret-color: var(--acento);
+}
+
+/* With the mirror painting the words, the real text has to get out of the way —
+   but only when the mirror is actually there (see TOPE_RESALTADO). */
+.manuscrito--resaltado .manuscrito__area {
+  color: transparent;
+}
+
+.manuscrito__espejo {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+  color: var(--ink);
+}
+
+/* The syntax: present, selectable, deletable — and quiet. */
+.manuscrito__espejo .sintaxis {
+  opacity: 0.18;
+}
+
+.manuscrito__espejo .apagado {
+  opacity: 0.28;
+}
+
+.manuscrito__espejo .sintaxis.apagado {
+  opacity: 0.1;
+}
+
+.manuscrito__area::placeholder {
+  color: var(--tenue);
+  opacity: 0.7;
+}
+
+/* ── Chapter drawer ───────────────────────────────────────────────────────── */
+
+.capitulos {
+  width: 15rem;
+  flex: none;
+  border-right: 1px solid var(--linea);
+  background: var(--panel);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.capitulos__cabeza {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--linea);
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+}
+
+.capitulos__lista {
+  display: flex;
+  flex-direction: column;
+  padding: 0.35rem;
+  gap: 1px;
+}
+
+.capitulo {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: var(--radio);
+  text-align: left;
+  color: var(--ink-suave);
+  transition: background var(--paso);
+}
+
+.capitulo:hover {
+  background: var(--panel-alto);
+}
+
+.capitulo--aqui {
+  background: var(--acento-tenue);
+  color: var(--acento-ink);
+}
+
+.capitulo__n {
+  font-size: 0.68rem;
+  color: var(--tenue);
+  font-variant-numeric: tabular-nums;
+  min-width: 1.1rem;
+}
+
+.capitulo--aqui .capitulo__n {
+  color: inherit;
+}
+
+.capitulo__nombre {
+  flex: 1;
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.capitulo__palabras {
+  font-size: 0.68rem;
+  color: var(--tenue);
+  font-variant-numeric: tabular-nums;
+}
+
+.capitulos__pie {
+  margin-top: auto;
+  padding: 0.6rem 0.85rem;
+  border-top: 1px solid var(--linea);
+  font-size: 0.72rem;
+  color: var(--tenue);
+}
+
+/* ── Preview strip ────────────────────────────────────────────────────────── */
+
+.previa {
+  flex: none;
+  background: var(--panel-alto);
+  border-top: 1px solid var(--linea);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.cuerpo--lado .previa {
+  border-top: 0;
+  border-left: 1px solid var(--linea);
+}
+
+.previa__barra {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  border-bottom: 1px solid var(--linea);
+  font-size: 0.72rem;
+  color: var(--tenue);
+  flex: none;
+}
+
+.previa__lienzo {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 1.1rem;
+}
+
+.tirador {
+  height: 6px;
+  cursor: ns-resize;
+  background: transparent;
+  flex: none;
+  position: relative;
+}
+
+.cuerpo--lado .tirador {
+  height: auto;
+  width: 6px;
+  cursor: ew-resize;
+}
+
+.tirador::after {
+  content: "";
+  position: absolute;
+  inset: 2px 40%;
+  border-radius: 2px;
+  background: var(--linea-fuerte);
+  opacity: 0;
+  transition: opacity var(--paso);
+}
+
+.cuerpo--lado .tirador::after {
+  inset: 40% 2px;
+}
+
+.tirador:hover::after {
+  opacity: 1;
+}
+
+/* ── Panels (design, cover, export) ───────────────────────────────────────── */
+
+.panel {
+  width: 22rem;
+  max-width: 92vw;
+  flex: none;
+  border-left: 1px solid var(--linea);
+  background: var(--panel);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel__cabeza {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--linea);
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  z-index: 1;
+}
+
+.panel__titulo {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.panel__pestanas {
+  display: flex;
+  gap: 1px;
+  padding: 0 0.5rem;
+  border-bottom: 1px solid var(--linea);
+  position: sticky;
+  top: 3rem;
+  background: var(--panel);
+  z-index: 1;
+}
+
+.pestana {
+  padding: 0.5rem 0.6rem;
+  font-size: 0.78rem;
+  color: var(--tenue);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.pestana:hover {
+  color: var(--ink);
+}
+
+.pestana--aqui {
+  color: var(--ink);
+  border-bottom-color: var(--acento);
+}
+
+.grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 0.9rem;
+  border-bottom: 1px solid var(--linea);
+}
+
+.grupo:last-child {
+  border-bottom: 0;
+  padding-bottom: 3rem;
+}
+
+.grupo__titulo {
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.campo__etiqueta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--ink-suave);
+}
+
+.campo__valor {
+  font-size: 0.72rem;
+  color: var(--tenue);
+  font-variant-numeric: tabular-nums;
+}
+
+.campo__nota {
+  font-size: 0.7rem;
+  line-height: 1.5;
+  color: var(--tenue);
+}
+
+.campo__nota--aviso {
+  color: var(--peligro);
+}
+
+.entrada,
+.selector {
+  width: 100%;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  background: var(--panel-alto);
+  font-size: 0.82rem;
+}
+
+.entrada:focus,
+.selector:focus {
+  border-color: var(--acento);
+  outline: none;
+}
+
+.deslizador {
+  width: 100%;
+  accent-color: var(--acento);
+}
+
+.segmentado {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  background: var(--panel-alto);
+}
+
+.segmentado__opcion {
+  flex: 1;
+  padding: 0.32rem 0.3rem;
+  border-radius: 3px;
+  font-size: 0.74rem;
+  color: var(--tenue);
+  text-align: center;
+  transition: background var(--paso), color var(--paso);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.segmentado__opcion:hover {
+  color: var(--ink);
+}
+
+.segmentado__opcion--aqui {
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
+}
+
+.interruptor {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--ink-suave);
+  cursor: pointer;
+}
+
+.interruptor input {
+  accent-color: var(--acento);
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+}
+
+.colores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.color {
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  border: 1px solid rgb(0 0 0 / 12%);
+  transition: transform var(--paso);
+}
+
+.color:hover {
+  transform: scale(1.12);
+}
+
+.color--aqui {
+  box-shadow: 0 0 0 2px var(--panel), 0 0 0 3.5px var(--acento);
+}
+
+/* ── Font picker ──────────────────────────────────────────────────────────── */
+
+.fuentes {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.fuente {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radio);
+  text-align: left;
+  transition: background var(--paso);
+}
+
+.fuente:hover {
+  background: var(--panel-alto);
+}
+
+.fuente--aqui {
+  background: var(--acento-tenue);
+}
+
+.fuente__muestra {
+  font-size: 1.05rem;
+  line-height: 1.25;
+  color: var(--ink);
+}
+
+.fuente__nombre {
+  font-size: 0.7rem;
+  color: var(--tenue);
+}
+
+/* ── Presets ──────────────────────────────────────────────────────────────── */
+
+.recetas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.receta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.55rem;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  text-align: left;
+  transition: border-color var(--paso);
+}
+
+.receta:hover {
+  border-color: var(--acento);
+}
+
+.receta__nombre {
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.receta__que {
+  font-size: 0.68rem;
+  line-height: 1.4;
+  color: var(--tenue);
+}
+
+/* ── Reader ───────────────────────────────────────────────────────────────── */
+
+.lector {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--ground);
+  display: flex;
+  flex-direction: column;
+}
+
+.lector__barra {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--linea);
+  background: var(--panel);
+  flex: none;
+}
+
+.lector__hojas {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 1.5rem;
+}
+
+/* ── Dialogs ──────────────────────────────────────────────────────────────── */
+
+.velo {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgb(0 0 0 / 35%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.dialogo {
+  width: min(26rem, 100%);
+  background: var(--panel);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio-grande);
+  box-shadow: 0 20px 50px -12px rgb(0 0 0 / 35%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1.15rem;
+}
+
+.dialogo__titulo {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.dialogo__texto {
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--tenue);
+}
+
+.dialogo__botones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* ── Toast ────────────────────────────────────────────────────────────────── */
+
+.avisos {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translateX(-50%);
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: center;
+  pointer-events: none;
+}
+
+.aviso {
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--radio);
+  background: var(--ink);
+  color: var(--ground);
+  font-size: 0.8rem;
+  box-shadow: 0 8px 24px -8px rgb(0 0 0 / 40%);
+  animation: subir 0.2s ease;
+  max-width: min(30rem, 90vw);
+}
+
+.aviso--error {
+  background: var(--peligro);
+  color: #fff;
+}
+
+@keyframes subir {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* ── Phone ────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 760px) {
+  .capitulos,
+  .panel {
+    position: fixed;
+    inset: 0 0 0 auto;
+    width: min(20rem, 88vw);
+    z-index: 50;
+    box-shadow: -12px 0 40px -16px rgb(0 0 0 / 35%);
+  }
+
+  .capitulos {
+    inset: 0 auto 0 0;
+    border-right: 1px solid var(--linea);
+    box-shadow: 12px 0 40px -16px rgb(0 0 0 / 35%);
+  }
+
+  .cuerpo--lado {
+    flex-direction: column;
+  }
+
+  .cuerpo--lado .previa {
+    border-left: 0;
+    border-top: 1px solid var(--linea);
+  }
+
+  .manuscrito__caja {
+    padding: 1.5rem 1rem 40vh;
+  }
+
+  .estanteria__dentro {
+    padding: 1.5rem 1rem 3rem;
+  }
+}

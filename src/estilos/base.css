@@ -1,0 +1,174 @@
+/*
+ * Scriptorium — the ground the app stands on.
+ *
+ * THE LOOK, AND WHY IT IS THIS ONE. Everything else he has built has a voice:
+ * Alexandria is warm parchment, Chronica is gold and blood, the portfolio is
+ * violet on black, Atrio is cobalt on cream. A writing tool must not have a
+ * voice, because the page has to be the loudest thing on the screen and the
+ * chrome has to disappear while you work. So: near-neutral greys, one muted
+ * slate accent used sparingly, hairlines instead of borders, no shadow anywhere
+ * except under the paper — which is then the only object on screen with depth,
+ * and therefore the one your eye goes to.
+ *
+ * Small radii (4–6 px) on purpose. Alexandria's soft 16 px cards read as a
+ * comfortable room; an instrument reads as square.
+ */
+
+:root {
+  /* Light — "papel" */
+  --ground: #f2f1ee;
+  --panel: #ffffff;
+  --panel-alto: #fafaf8;
+  --ink: #1a1b1e;
+  --ink-suave: #45464c;
+  --tenue: #7c7d85;
+  --linea: #e2e1dc;
+  --linea-fuerte: #cfcec8;
+  --acento: #3d5a80;
+  --acento-ink: #2b425e;
+  --acento-tenue: #eaeff5;
+  --peligro: #a03232;
+  --peligro-tenue: #fbeeee;
+  --bien: #2f6b46;
+
+  /* The paper is its own thing and does NOT follow the theme: a book is
+     printed on paper, and a page that turns grey in dark mode is a screen
+     pretending to be a page. Only the room around it goes dark. */
+  --hoja: #fdfcf9;
+  --hoja-ink: #16171a;
+  --hoja-sombra: 0 1px 2px rgb(0 0 0 / 8%), 0 8px 24px -8px rgb(0 0 0 / 18%);
+
+  --radio: 5px;
+  --radio-grande: 8px;
+
+  --ui:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+  --mono: ui-monospace, "Cascadia Code", Consolas, "SF Mono", "JetBrains Mono", monospace;
+
+  --paso: 0.15s ease;
+  color-scheme: light;
+}
+
+:root[data-tema="oscuro"] {
+  --ground: #101113;
+  --panel: #17181b;
+  --panel-alto: #1d1f22;
+  --ink: #e8e8e4;
+  --ink-suave: #c2c2bd;
+  --tenue: #8b8c93;
+  --linea: #26282c;
+  --linea-fuerte: #363940;
+  --acento: #7fa8d6;
+  --acento-ink: #a8c6e6;
+  --acento-tenue: #1b2530;
+  --peligro: #d98080;
+  --peligro-tenue: #2a1a1a;
+  --bien: #78b894;
+  --hoja-sombra: 0 1px 2px rgb(0 0 0 / 45%), 0 10px 30px -8px rgb(0 0 0 / 60%);
+  color-scheme: dark;
+}
+
+:root[data-tema="sepia"] {
+  --ground: #e8e0d0;
+  --panel: #f4eee1;
+  --panel-alto: #faf6ec;
+  --ink: #241f17;
+  --ink-suave: #4a4136;
+  --tenue: #7e7362;
+  --linea: #dcd2be;
+  --linea-fuerte: #c8bca4;
+  --acento: #7a5a34;
+  --acento-ink: #5e4526;
+  --acento-tenue: #eee5d2;
+  --peligro: #9a3b2c;
+  --peligro-tenue: #f2e2dc;
+  --bien: #5c7a4a;
+  --hoja: #fdfaf2;
+  color-scheme: light;
+}
+
+/* Reset — only what an app actually needs. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#raiz {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--ui);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+figure {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+a {
+  color: var(--acento);
+}
+
+:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Scrollbars that do not shout. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--linea-fuerte) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--linea-fuerte);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

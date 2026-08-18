@@ -1,0 +1,368 @@
+/**
+ * Ajustes: the room, and the wiring.
+ *
+ * Two very different things share this panel because they are what "settings"
+ * means to the person using it. The room (theme, editor type, focus) is taste.
+ * The wiring (the library passphrase, the server address) is the part that
+ * decides whether a book is saved at all — so it says, in plain Spanish, what
+ * each piece does and what happens without it, and it TESTS the connection
+ * instead of leaving the writer to guess.
+ */
+
+import { useEffect, useState } from "react";
+import { AJUSTES_POR_DEFECTO, type Ajustes, type Tema } from "@/datos/ajustes";
+import { guardarClave, leerClave } from "@/datos/clave";
+import { comprobarNube, olvidarToken, SITIO_NUBE, type EstadoNube } from "@/datos/nube";
+import { direccionGuardada, guardarDireccion, listarEnServidor, olvidarTunel } from "@/datos/servidor";
+import { FUENTES } from "@/nucleo/fuentes";
+import { leerRescates, olvidarRescate } from "@/datos/biblioteca";
+import { avisar } from "@/ui/Avisos";
+import { Icono } from "@/ui/Icono";
+
+export function PanelAjustes({
+  ajustes,
+  onAjustes,
+  onCerrar,
+  onRecargar,
+}: {
+  ajustes: Ajustes;
+  onAjustes: (ajustes: Ajustes) => void;
+  onCerrar: () => void;
+  onRecargar: () => void;
+}) {
+  const [clave, setClave] = useState(leerClave() ?? "");
+  const [direccion, setDireccion] = useState(direccionGuardada() ?? "");
+  const [nube, setNube] = useState<EstadoNube | "probando" | null>(null);
+  const [servidor, setServidor] = useState<"si" | "no" | "probando" | null>(null);
+  const rescates = leerRescates();
+
+  useEffect(() => {
+    void probarTodo();
+    // Only on open: probing costs a PBKDF2 derivation and two requests.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const probarTodo = async () => {
+    setNube("probando");
+    setServidor("probando");
+    setNube(await comprobarNube());
+    setServidor((await listarEnServidor()) ? "si" : "no");
+  };
+
+  return (
+    <aside className="panel" aria-label="Ajustes">
+      <div className="panel__cabeza">
+        <span className="panel__titulo">Ajustes</span>
+        <button type="button" className="boton boton--desnudo" onClick={onCerrar} title="Cerrar">
+          <Icono nombre="cerrar" />
+        </button>
+      </div>
+
+      {/* ── Wiring ─────────────────────────────────────────────────────────── */}
+
+      <div className="grupo">
+        <span className="grupo__titulo">Dónde se guardan tus libros</span>
+
+        <div className="campo">
+          <span className="campo__etiqueta">
+            Tu ordenador
+            <span className="campo__valor">
+              {servidor === "probando" ? "probando…" : servidor === "si" ? "responde" : "no responde"}
+            </span>
+          </span>
+          <p className="campo__nota">
+            Cuando está encendido, Scriptorium escribe directamente los archivos .md de Drive — los
+            mismos que abre Alexandria. Es la única forma de que el libro sea de verdad un archivo.
+          </p>
+        </div>
+
+        <div className="campo">
+          <span className="campo__etiqueta">
+            La nube
+            <span className="campo__valor">
+              {nube === "probando"
+                ? "probando…"
+                : nube === "lista"
+                  ? "conectada"
+                  : nube === "sin-clave"
+                    ? "falta la clave"
+                    : nube === "rechazada"
+                      ? "clave incorrecta"
+                      : "no responde"}
+            </span>
+          </span>
+          <p className="campo__nota">
+            Con el ordenador apagado, los libros viajan cifrados por la nube de Alexandria
+            ({SITIO_NUBE.replace("https://", "")}) y el ordenador los aplica al volver. Nadie más
+            que tú puede leerlos: se cifran aquí, en este navegador.
+          </p>
+        </div>
+
+        <label className="campo">
+          <span className="campo__etiqueta">Clave de la biblioteca</span>
+          <input
+            className="entrada"
+            type="password"
+            value={clave}
+            autoComplete="off"
+            placeholder="la misma que abre Alexandria"
+            onChange={(evento) => setClave(evento.target.value)}
+          />
+          <span className="campo__nota">
+            Está en <code>biblioteca.clave.txt</code>, en la carpeta de Alexandria de tu ordenador.
+            Sin ella esta web solo puede guardar en este navegador.
+          </span>
+        </label>
+
+        <label className="campo">
+          <span className="campo__etiqueta">Dirección del servidor</span>
+          <input
+            className="entrada"
+            value={direccion}
+            placeholder="se busca sola — déjalo vacío"
+            onChange={(evento) => setDireccion(evento.target.value)}
+          />
+          <span className="campo__nota">
+            Solo si quieres forzar una: por ejemplo <code>192.168.1.40:4000</code> desde el móvil en
+            tu wifi. Vacío significa «búscalo tú».
+          </span>
+        </label>
+
+        <div style={{ display: "flex", gap: "0.4rem" }}>
+          <button
+            type="button"
+            className="boton boton--principal"
+            onClick={() => {
+              guardarClave(clave || null);
+              guardarDireccion(direccion || null);
+              olvidarToken();
+              olvidarTunel();
+              void probarTodo().then(onRecargar);
+              avisar("Guardado. Volviendo a conectar…");
+            }}
+          >
+            Guardar y reconectar
+          </button>
+          <button type="button" className="boton" onClick={() => void probarTodo()}>
+            Probar
+          </button>
+        </div>
+      </div>
+
+      {/* ── Room ───────────────────────────────────────────────────────────── */}
+
+      <div className="grupo">
+        <span className="grupo__titulo">Ambiente</span>
+        <div className="campo">
+          <span className="campo__etiqueta">Tema</span>
+          <div className="segmentado">
+            {(
+              [
+                ["sistema", "Sistema"],
+                ["claro", "Claro"],
+                ["sepia", "Sepia"],
+                ["oscuro", "Oscuro"],
+              ] as [Tema, string][]
+            ).map(([valor, texto]) => (
+              <button
+                key={valor}
+                type="button"
+                className={`segmentado__opcion${
+                  ajustes.tema === valor ? " segmentado__opcion--aqui" : ""
+                }`}
+                onClick={() => onAjustes({ ...ajustes, tema: valor })}
+              >
+                {texto}
+              </button>
+            ))}
+          </div>
+          <span className="campo__nota">
+            La hoja compuesta no cambia: un libro se imprime en papel, y una página que se vuelve
+            gris de noche es una pantalla fingiendo ser una página.
+          </span>
+        </div>
+      </div>
+
+      <div className="grupo">
+        <span className="grupo__titulo">Cómo se ve mientras escribes</span>
+        <label className="campo">
+          <span className="campo__etiqueta">Letra del editor</span>
+          <select
+            className="selector"
+            value={ajustes.fuenteEditor}
+            onChange={(evento) => onAjustes({ ...ajustes, fuenteEditor: evento.target.value })}
+          >
+            {FUENTES.map((fuente) => (
+              <option key={fuente.key} value={fuente.key}>
+                {fuente.name}
+              </option>
+            ))}
+          </select>
+          <span className="campo__nota">
+            Solo para escribir. La letra del libro se elige en el panel de diseño.
+          </span>
+        </label>
+
+        <Rango
+          etiqueta="Tamaño"
+          valor={ajustes.tamanoEditor}
+          unidad="px"
+          minimo={13}
+          maximo={30}
+          paso={1}
+          onCambiar={(tamanoEditor) => onAjustes({ ...ajustes, tamanoEditor })}
+        />
+        <Rango
+          etiqueta="Ancho de la columna"
+          valor={ajustes.anchoEditor}
+          unidad=" caracteres"
+          minimo={40}
+          maximo={110}
+          paso={1}
+          onCambiar={(anchoEditor) => onAjustes({ ...ajustes, anchoEditor })}
+        />
+        <Rango
+          etiqueta="Interlineado"
+          valor={ajustes.interlineadoEditor}
+          unidad="×"
+          minimo={1.2}
+          maximo={2.4}
+          paso={0.05}
+          onCambiar={(interlineadoEditor) => onAjustes({ ...ajustes, interlineadoEditor })}
+        />
+
+        <label className="interruptor">
+          <span>Scroll de máquina de escribir</span>
+          <input
+            type="checkbox"
+            checked={ajustes.maquina}
+            onChange={(evento) => onAjustes({ ...ajustes, maquina: evento.target.checked })}
+          />
+        </label>
+        <span className="campo__nota">
+          La línea que escribes se queda en el centro de la pantalla en vez de bajar hasta el borde.
+        </span>
+
+        <label className="interruptor">
+          <span>Tipografía automática</span>
+          <input
+            type="checkbox"
+            checked={ajustes.tipografia}
+            onChange={(evento) => onAjustes({ ...ajustes, tipografia: evento.target.checked })}
+          />
+        </label>
+        <span className="campo__nota">
+          Escribe <code>...</code> y sale «…»; <code>--</code> sale «—»; <code>&lt;&lt;</code> y{" "}
+          <code>&gt;&gt;</code> salen «» .
+        </span>
+
+        <label className="interruptor">
+          <span>Avisar si cierro con algo sin guardar</span>
+          <input
+            type="checkbox"
+            checked={ajustes.avisarSalida}
+            onChange={(evento) => onAjustes({ ...ajustes, avisarSalida: evento.target.checked })}
+          />
+        </label>
+      </div>
+
+      {rescates.length > 0 && (
+        <div className="grupo">
+          <span className="grupo__titulo">Copias de rescate</span>
+          <p className="campo__nota">
+            Texto de libros borrados, guardado por si acaso. Vive solo en este navegador.
+          </p>
+          {rescates.map((rescate) => (
+            <div key={rescate.slug} style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+              <span style={{ flex: 1, fontSize: "0.78rem" }}>{rescate.slug}</span>
+              <button
+                type="button"
+                className="boton"
+                onClick={() => {
+                  const enlace = document.createElement("a");
+                  const url = URL.createObjectURL(
+                    new Blob([rescate.contenido], { type: "text/markdown;charset=utf-8" }),
+                  );
+                  enlace.href = url;
+                  enlace.download = `${rescate.slug}.md`;
+                  enlace.click();
+                  setTimeout(() => URL.revokeObjectURL(url), 2000);
+                }}
+              >
+                <Icono nombre="descargar" tamano={13} />
+              </button>
+              <button
+                type="button"
+                className="boton boton--peligro"
+                onClick={() => {
+                  olvidarRescate(rescate.slug);
+                  avisar("Copia de rescate borrada.");
+                  onRecargar();
+                }}
+              >
+                <Icono nombre="papelera" tamano={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="grupo">
+        <button
+          type="button"
+          className="boton"
+          onClick={() => {
+            onAjustes({ ...AJUSTES_POR_DEFECTO });
+            avisar("Ambiente restablecido.");
+          }}
+        >
+          Volver al ambiente por defecto
+        </button>
+        <p className="campo__nota">
+          No toca tus libros ni la clave: solo el tema, la letra del editor y las opciones de esta
+          sección.
+        </p>
+      </div>
+    </aside>
+  );
+}
+
+function Rango({
+  etiqueta,
+  valor,
+  unidad,
+  minimo,
+  maximo,
+  paso,
+  onCambiar,
+}: {
+  etiqueta: string;
+  valor: number;
+  unidad: string;
+  minimo: number;
+  maximo: number;
+  paso: number;
+  onCambiar: (valor: number) => void;
+}) {
+  const decimales = paso < 1 ? 2 : 0;
+  return (
+    <label className="campo">
+      <span className="campo__etiqueta">
+        {etiqueta}
+        <span className="campo__valor">
+          {valor.toFixed(decimales).replace(/\.?0+$/, "")}
+          {unidad}
+        </span>
+      </span>
+      <input
+        className="deslizador"
+        type="range"
+        value={valor}
+        min={minimo}
+        max={maximo}
+        step={paso}
+        onChange={(evento) => onCambiar(Number.parseFloat(evento.target.value))}
+      />
+    </label>
+  );
+}

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Scriptorium — escribir libros</title>
+    <meta
+      name="description"
+      content="Un sitio para escribir libros: escribes arriba y las páginas se componen debajo, con tu tipografía, tus márgenes y tu portada. Comparte biblioteca con Alexandria."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f2f1ee" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#101113" media="(prefers-color-scheme: dark)" />
+    <!--
+      An inline SVG favicon: a page with a rule across it. No request, no file,
+      and it follows the tab's own colour scheme.
+    -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%233d5a80'/%3E%3Cpath d='M9 8h14M9 13h14M9 18h9' stroke='%23fdfcf9' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M9 24h6' stroke='%23fdfcf9' stroke-width='2' stroke-linecap='round' opacity='.55'/%3E%3C/svg%3E"
+    />
+    <!--
+      The theme is written onto <html> before React mounts, so a dark-mode user
+      never sees a white flash on a cold load. It reads the same key the app
+      writes, and falls back to the system setting.
+    -->
+    <script>
+      (function () {
+        try {
+          var guardados = JSON.parse(localStorage.getItem("scriptorium.ajustes") || "{}");
+          var tema = guardados.tema || "sistema";
+          if (tema === "sistema") {
+            tema = window.matchMedia("(prefers-color-scheme: dark)").matches ? "oscuro" : "claro";
+          }
+          document.documentElement.dataset.tema = tema;
+        } catch (error) {
+          document.documentElement.dataset.tema = "claro";
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="raiz"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

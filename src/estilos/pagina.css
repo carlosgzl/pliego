@@ -1,0 +1,420 @@
+/*
+ * The composed page.
+ *
+ * HOW IT WORKS, because it is not obvious: the manuscript is laid out as a
+ * MULTI-COLUMN FLOW whose column box is exactly the text box of one page. The
+ * browser then breaks the prose into columns for us — and a column, here, is a
+ * page. That is why the page count is real and why it changes the instant you
+ * change a margin: it is the browser's own line-breaking, not an estimate.
+ *
+ * Everything is driven by custom properties the component sets from
+ * `geometria()`, so the same markup renders as a 200 px strip under the editor
+ * and as a full-size page in the reader, breaking identically in both.
+ */
+
+.hoja {
+  position: relative;
+  flex: none;
+  width: var(--pagina-ancho);
+  height: var(--pagina-alto);
+  background: var(--hoja);
+  color: var(--hoja-ink);
+  box-shadow: var(--hoja-sombra);
+  overflow: hidden;
+  border-radius: 1px;
+}
+
+/* A hairline at the spine, so a spread reads as two pages of one book. */
+.hoja--verso {
+  border-right: 1px solid rgb(0 0 0 / 6%);
+}
+
+.flujo {
+  position: absolute;
+  inset: var(--margen-arriba) var(--margen-corte) var(--margen-abajo) var(--margen-lomo);
+  columns: var(--texto-ancho);
+  column-gap: calc(var(--margen-corte) + var(--margen-lomo));
+  column-fill: auto;
+  font-family: var(--libro-fuente);
+  font-size: var(--cuerpo);
+  line-height: var(--interlineado);
+  letter-spacing: var(--tracking);
+  color: var(--hoja-ink);
+  /* Old-style figures and real small caps when the face has them: this is the
+     difference between a page that is set and a page that is typed. */
+  font-variant-numeric: oldstyle-nums proportional-nums;
+  font-kerning: normal;
+  font-feature-settings: "liga" 1, "clig" 1;
+}
+
+/* Sliding the flow sideways by whole pages is what "turn the page" means in a
+   column layout: nothing re-flows, so the break points cannot change. */
+.flujo--pagina {
+  transform: translateX(var(--desplazamiento, 0px));
+}
+
+.parrafo {
+  margin: 0;
+  text-align: left;
+  hyphens: manual;
+  orphans: 2;
+  widows: 2;
+}
+
+.flujo--justificado .parrafo {
+  text-align: justify;
+  text-justify: inter-word;
+}
+
+.flujo--guiones .parrafo {
+  hyphens: auto;
+}
+
+.parrafo--sangrado {
+  text-indent: var(--sangria);
+}
+
+.parrafo + .parrafo {
+  margin-top: var(--espacio-parrafo, 0);
+}
+
+/* ── Chapter openers ──────────────────────────────────────────────────────── */
+
+.titulo {
+  break-before: column;
+  break-after: avoid;
+  margin: 0 0 calc(var(--interlineado) * 1em);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.flujo--seguido .titulo {
+  break-before: auto;
+  margin-top: calc(var(--interlineado) * 2em);
+}
+
+/* The first chapter must not push a blank page in front of itself. */
+.titulo:first-child {
+  break-before: auto;
+}
+
+.titulo--grande {
+  font-size: 1.7em;
+  text-align: center;
+  margin-top: calc(var(--interlineado) * 2em);
+  letter-spacing: -0.01em;
+}
+
+.titulo--discreto {
+  font-size: 1.05em;
+  font-weight: 600;
+}
+
+.titulo--versalitas {
+  font-size: 1em;
+  font-weight: 500;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  margin-top: calc(var(--interlineado) * 2.5em);
+}
+
+.numero-capitulo {
+  display: block;
+  font-size: 0.5em;
+  font-weight: 400;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  text-align: center;
+  color: rgb(0 0 0 / 45%);
+  margin-bottom: 1.2em;
+}
+
+.titulo--discreto .numero-capitulo {
+  text-align: left;
+  font-size: 0.66em;
+  margin-bottom: 0.5em;
+}
+
+.epigrafe {
+  break-after: avoid;
+  break-before: avoid;
+  margin: 0 0 calc(var(--interlineado) * 1em);
+  font-size: 1.05em;
+  font-weight: 600;
+}
+
+/* ── Fine typography ──────────────────────────────────────────────────────── */
+
+/*
+ * The drop cap.
+ *
+ * THE ARITHMETIC, because getting it wrong is very visible: the letter must be
+ * exactly as tall as the lines it descends past, so its em box has to equal
+ * `lines × line-height` — and its OWN line-height must then be 1, not the
+ * paragraph's. Setting it to the paragraph's leading multiplies the two and
+ * gives the letter an eighteen-em line box: the glyph centres inside that,
+ * lands three lines low, and the paragraph wraps around a hole.
+ *
+ * The small negative margin pulls the cap's top up to the first line's cap
+ * height (the font's internal ascent sits a little below the box top).
+ */
+.capitular::first-letter {
+  float: left;
+  font-size: calc(var(--capitular-lineas) * var(--interlineado) * 1em);
+  line-height: 1;
+  padding-right: 0.06em;
+  margin-top: -0.08em;
+  font-weight: 500;
+}
+
+/* A drop cap and an indent on the same line is a double signal: pick one. */
+.capitular {
+  text-indent: 0;
+}
+
+.versalitas-inicio::first-line {
+  font-variant-caps: small-caps;
+  letter-spacing: 0.04em;
+}
+
+.marca-fuerte {
+  font-weight: 700;
+}
+
+.marca-cursiva {
+  font-style: italic;
+}
+
+/* ── Scene breaks ─────────────────────────────────────────────────────────── */
+
+.dinkus {
+  margin: calc(var(--interlineado) * 1em) 0;
+  text-align: center;
+  break-inside: avoid;
+  color: rgb(0 0 0 / 45%);
+  letter-spacing: 0.5em;
+  /* The letterspacing pushes the group right by one space; pull it back so it
+     is optically centred, which is the whole job of a dinkus. */
+  text-indent: 0.5em;
+}
+
+.dinkus--blanco {
+  height: calc(var(--interlineado) * 1em);
+  margin: 0;
+}
+
+/* ── Running heads and folios ─────────────────────────────────────────────── */
+
+.cornisa,
+.folio {
+  position: absolute;
+  font-family: var(--libro-fuente);
+  font-size: calc(var(--cuerpo) * 0.72);
+  letter-spacing: 0.08em;
+  color: rgb(0 0 0 / 42%);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cornisa {
+  top: calc(var(--margen-arriba) * 0.42);
+  left: var(--margen-lomo);
+  right: var(--margen-corte);
+  text-align: center;
+  text-transform: uppercase;
+  font-variant-caps: small-caps;
+}
+
+.folio {
+  bottom: calc(var(--margen-abajo) * 0.38);
+  font-variant-numeric: oldstyle-nums;
+}
+
+.folio--centro {
+  left: var(--margen-lomo);
+  right: var(--margen-corte);
+  text-align: center;
+}
+
+.folio--izquierda {
+  left: var(--margen-lomo);
+}
+
+.folio--derecha {
+  right: var(--margen-corte);
+}
+
+.folio--arriba {
+  bottom: auto;
+  top: calc(var(--margen-arriba) * 0.42);
+}
+
+/* ── Cover ────────────────────────────────────────────────────────────────── */
+
+.portada {
+  position: relative;
+  aspect-ratio: 2 / 3;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 2px;
+  box-shadow: var(--hoja-sombra);
+  display: flex;
+  flex-direction: column;
+  background: var(--portada-color);
+  color: var(--portada-tinta);
+  font-family: var(--portada-fuente);
+}
+
+.portada__imagen {
+  position: absolute;
+  left: 0;
+  right: 0;
+  object-fit: var(--portada-encaje, cover);
+  object-position: center;
+}
+
+.portada__imagen--completa {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.portada__imagen--arriba {
+  top: 0;
+  height: 46%;
+  width: 100%;
+}
+
+.portada__imagen--abajo {
+  bottom: 0;
+  height: 42%;
+  width: 100%;
+}
+
+.portada__imagen--ventana {
+  top: 30%;
+  height: 34%;
+  left: 12%;
+  right: 12%;
+  width: 76%;
+}
+
+/* Only a full-bleed image needs a veil: the others already have clear paper
+   for the lettering, and dimming those would just make the picture muddy. */
+.portada__velo {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgb(0 0 0 / 42%) 0%,
+    rgb(0 0 0 / 12%) 42%,
+    rgb(0 0 0 / 55%) 100%
+  );
+}
+
+.portada__letras {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+  padding: 9%;
+  margin-top: auto;
+}
+
+.portada__letras--arriba {
+  margin-top: 0;
+  margin-bottom: auto;
+  padding-top: 52%;
+}
+
+.portada__titulo {
+  font-size: 1.55em;
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+}
+
+.portada__sub {
+  font-size: 0.78em;
+  opacity: 0.82;
+  font-style: italic;
+}
+
+.portada__autor {
+  font-size: 0.7em;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.86;
+  margin-top: 0.55em;
+}
+
+/* Cover styles. Each is one idea, not a pile of effects. */
+.portada--sello .portada__letras {
+  border-top: 1px solid currentcolor;
+  padding-top: 6%;
+  margin-inline: 9%;
+  padding-inline: 0;
+}
+
+.portada--franja::before {
+  content: "";
+  position: absolute;
+  inset: auto 0 22% 0;
+  height: 34%;
+  background: rgb(0 0 0 / 18%);
+}
+
+.portada--rejilla::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(currentcolor 1px, transparent 1px),
+    linear-gradient(90deg, currentcolor 1px, transparent 1px);
+  background-size: 14% 9.4%;
+  opacity: 0.13;
+}
+
+.portada--medianoche::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 80% at 50% 8%, rgb(255 255 255 / 22%), transparent 62%);
+}
+
+/* The miniature on the shelf. Same markup, scaled by font-size alone, so a
+   cover cannot look different in the two places it appears. */
+.portada--mini {
+  font-size: 11px;
+}
+
+.portada--grande {
+  font-size: 20px;
+}
+
+/* ── Printing ─────────────────────────────────────────────────────────────── */
+
+@media print {
+  @page {
+    margin: 0;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  .app,
+  .barra,
+  .panel,
+  .capitulos,
+  .previa,
+  .avisos {
+    display: none !important;
+  }
+
+  .impresion {
+    display: block !important;
+  }
+}
