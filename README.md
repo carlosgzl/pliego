@@ -5,7 +5,7 @@ con tu tipografía, tus márgenes y tu portada — y lo que sale es un libro, no
 documento.
 
 **En internet:** https://pliego-cga.netlify.app
-**Comparte biblioteca con:** [Alexandria](https://github.com/carlosgzl/alexandria)
+**Comparte biblioteca con:** Alexandria (repositorio privado)
 
 ---
 
