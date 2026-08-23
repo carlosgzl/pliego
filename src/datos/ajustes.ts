@@ -103,6 +103,18 @@ export interface Ajustes {
    * arriba, y Esc lo deshace todo.
    */
   escritura: boolean;
+  /**
+   * Que el modo escritura se lleve por delante también el navegador.
+   *
+   * Esconder la aplicación y dejar arriba la barra de direcciones, las pestañas
+   * y los marcadores era esconder la mitad. Con esto puesto, entrar en modo
+   * escritura pide pantalla completa de verdad: se queda el texto y nada más,
+   * ni de la web ni del navegador. Esc devuelve las dos cosas a la vez.
+   *
+   * Se puede apagar porque hay quien escribe con el correo o la documentación
+   * en otra pestaña y quiere poder saltar sin salirse de nada.
+   */
+  pantallaCompleta: boolean;
 }
 
 export const AJUSTES_POR_DEFECTO: Ajustes = {
@@ -127,6 +139,7 @@ export const AJUSTES_POR_DEFECTO: Ajustes = {
   sonido: "ninguno",
   volumenSonido: 0.6,
   escritura: false,
+  pantallaCompleta: true,
 };
 
 export function leerAjustes(): Ajustes {

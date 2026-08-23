@@ -24,6 +24,7 @@ import { FUENTES } from "@/nucleo/fuentes";
 import { leerRescates, olvidarRescate } from "@/datos/biblioteca";
 import { avisar } from "@/ui/Avisos";
 import { ACENTOS } from "@/ui/acento";
+import { comoAplicacion } from "@/ui/pantalla";
 import { Icono } from "@/ui/Icono";
 import { probarSonido, SONIDOS, type Sonido } from "@/ui/sonido";
 import { useSalida } from "@/ui/useSalida";
@@ -326,7 +327,8 @@ export function PanelAjustes({
             <span>Modo escritura</span>
             <span className="campo__nota">
               Esconde la barra, la página compuesta, los gadgets y el índice: queda tu texto y nada
-              más. La barra vuelve al acercar el ratón al borde de arriba, y Esc lo deshace.
+              más. La barra vuelve al acercar el ratón al borde de arriba, y Esc lo deshace. Se
+              enciende y se apaga con F11.
             </span>
           </span>
           <input
@@ -335,6 +337,32 @@ export function PanelAjustes({
             onChange={(evento) => onAjustes({ ...ajustes, escritura: evento.target.checked })}
           />
         </label>
+
+        <label className="interruptor">
+          <span className="interruptor__texto">
+            <span>…y también a pantalla completa</span>
+            <span className="campo__nota">
+              Que el modo escritura se lleve por delante el navegador entero: sin barra de
+              direcciones, sin pestañas y sin marcadores. Queda tu texto sobre el fondo y nada más.
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            checked={ajustes.pantallaCompleta}
+            onChange={(evento) =>
+              onAjustes({ ...ajustes, pantallaCompleta: evento.target.checked })
+            }
+          />
+        </label>
+
+        {!comoAplicacion() && (
+          <p className="campo__nota">
+            <strong>Para que abra siempre así:</strong> instala Pliego como aplicación. En Chrome o
+            Edge, el icono de instalar que sale a la derecha de la barra de direcciones; en el iPhone,
+            Compartir → «Añadir a pantalla de inicio». Entonces abre sin nada del navegador, tiene su
+            propio icono y funciona sin conexión.
+          </p>
+        )}
 
         <label className="interruptor">
           <span>Avisar si cierro con algo sin guardar</span>

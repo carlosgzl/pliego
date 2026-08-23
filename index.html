@@ -12,6 +12,19 @@
     <meta name="theme-color" content="#f2f1ee" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#101113" media="(prefers-color-scheme: dark)" />
     <!--
+      Instalable: en el escritorio y en el móvil, Pliego se puede añadir como
+      aplicación y entonces abre SIN barra de direcciones, sin pestañas y sin
+      marcadores. Es la única forma de conseguir eso en un iPhone, donde la API
+      de pantalla completa no existe, y la más cómoda en el ordenador — una vez
+      instalada, ya abre así siempre.
+    -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Pliego" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!--
       An inline SVG favicon: a page with a rule across it. No request, no file,
       and it follows the tab's own colour scheme.
     -->

@@ -19,3 +19,19 @@
   for = "/assets/*"
   [headers.values]
     cache-control = "public, max-age=31536000, immutable"
+
+# El trabajador de servicio NO se guarda en caché.
+#
+# Es el archivo que decide qué se guarda y qué no; si el navegador se quedara
+# con una copia vieja, un despliegue nuevo podría no llegar nunca. Se revalida
+# siempre, que cuesta una petición condicional de nada.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    cache-control = "public, max-age=0, must-revalidate"
+    service-worker-allowed = "/"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    cache-control = "public, max-age=3600"
