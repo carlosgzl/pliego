@@ -240,7 +240,10 @@ function normalizarBiblioteca(crudo) {
   return salida;
 }
 
-function fundir(unoCrudo, otroCrudo) {
+/* Exportada además de usada: es la aritmética que decide qué versión de un
+   capítulo sobrevive, y eso se prueba (`auth.test.mjs`). Netlify solo mira
+   `default` y `config`, así que un nombre más aquí no cambia nada. */
+export function fundir(unoCrudo, otroCrudo) {
   const uno = normalizarBiblioteca(unoCrudo);
   const otro = normalizarBiblioteca(otroCrudo);
 
