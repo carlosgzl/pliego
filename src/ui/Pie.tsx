@@ -7,6 +7,11 @@
  * izquierda qué es esto, a la derecha quién lo firma — y el bloque tiene los
  * dos extremos apoyados.
  *
+ * Se arregla AQUÍ DENTRO y en ningún otro sitio. Llegó a haber también un pie
+ * clavado al borde de abajo de la ventana, y eso apretaba la pantalla de inicio
+ * entera contra el marco: un arreglo que nadie había pedido, para un problema
+ * que estaba en esta caja.
+ *
  * LA FIRMA, EN LUGAR DE «DISEÑADA Y PROGRAMADA POR». Es su firma de verdad,
  * vectorizada, y lleva al portfolio. Dice lo mismo que la línea de texto que
  * había y lo dice como se dice: firmando. Va en el color de la aplicación
@@ -14,7 +19,8 @@
  *
  * SE FUE EL AVISO DE BETA. Estaba repetido —la insignia de aquí al lado, la de
  * la cabecera, la de la puerta— y a la cuarta vez ya no avisa de nada: se lee
- * como desconfianza en el propio programa.
+ * como desconfianza en el propio programa. Y se fue LinkedIn: la firma ya lleva
+ * a donde está todo lo suyo, y dos enlaces donde basta uno son dos decisiones.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -23,7 +29,6 @@ import { Firma } from "./Firma";
 import { useSalida } from "./useSalida";
 
 const PORTFOLIO = "https://portfoliocga.netlify.app";
-const LINKEDIN = "https://www.linkedin.com/in/carlos-gonz%C3%A1lez-alcalde-392121308";
 
 export function SelectorColor({
   valor,
@@ -137,9 +142,6 @@ export function Pie() {
             title="Carlos González Alcalde — ver su portfolio"
           >
             <Firma alto={62} titulo="Carlos González Alcalde" />
-          </a>
-          <a className="pie__red" href={LINKEDIN} target="_blank" rel="noreferrer noopener">
-            LinkedIn
           </a>
         </div>
       </div>

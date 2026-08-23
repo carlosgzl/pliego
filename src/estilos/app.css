@@ -1673,28 +1673,18 @@
 /* ── Pantalla de inicio ───────────────────────────────────────────────────── */
 
 /*
- * EL PIE, PEGADO ABAJO. Esto es lo otro que le hacía «flotar».
+ * La estantería se desplaza y nada más.
  *
- * La estantería es la caja que se desplaza, y el pie es su último hijo. Con la
- * estantería a medias —dos o tres libros— el contenido no llega abajo, así que
- * el pie terminaba a media pantalla con CIENTO VEINTE PÍXELES de fondo vacío
- * por debajo. Y como el pie tiene su propio color de panel, se leía como una
- * franja suelta flotando sobre la página en lugar de como el final de esta.
- *
- * En columna y con `margin-top: auto`, el hueco sobrante se lo come el espacio
- * ANTES del pie: con poco contenido se va al borde de abajo, y con mucho sigue
- * al texto como siempre.
+ * Aquí llegó a haber un `display: flex` en columna con el pie clavado al borde
+ * de abajo. NO ESTABA PEDIDO: apretaba la pantalla de inicio contra la ventana
+ * y él lo dijo en cuanto lo vio. El pie se queda donde termina el contenido,
+ * que es donde termina una página, y lo que había que arreglar de él —que se
+ * leía como un bloque suelto— estaba dentro del pie, no aquí.
  */
 .inicio {
   flex: 1;
   overflow: auto;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.inicio > .pie {
-  margin-top: auto;
 }
 
 .inicio__dentro {
@@ -2082,15 +2072,6 @@
   overflow: visible;
 }
 
-.pie__red {
-  font-size: 0.76rem;
-  color: var(--tenue);
-  text-underline-offset: 2px;
-}
-
-.pie__red:hover {
-  color: var(--acento-ink);
-}
 
 /*
  * El pie en un teléfono, y por qué esta consulta está AQUÍ.
