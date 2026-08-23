@@ -31,13 +31,9 @@
     cache-control = "public, max-age=0, must-revalidate"
     service-worker-allowed = "/"
 
-# El manifest, con su tipo de verdad.
-#
-# Netlify lo sirve como `application/octet-stream`, y con ese tipo hay
-# navegadores que sencillamente no ofrecen instalar la aplicación — que es todo
-# el motivo de que exista este archivo.
+# El manifest. Su tipo se pone en `public/_headers`, que ahí está explicado
+# por qué, y su nombre acaba en .json por el mismo motivo.
 [[headers]]
-  for = "/manifest.webmanifest"
+  for = "/manifest.json"
   [headers.values]
-    content-type = "application/manifest+json; charset=utf-8"
     cache-control = "public, max-age=3600"
