@@ -50,31 +50,76 @@ Las marcas que entiende son dos: `**negrita**` y `*cursiva*`. Los capítulos son
 Markdown, y no lo va a haber: cada añadido es otra cosa que puede componerse mal
 en medio de una novela.
 
-## Dónde se guarda: la API compartida
+## Dónde se guarda: cuatro sitios y una regla
 
-Pliego no tiene servidor propio. Usa **la API de Alexandria**, que es lo
-que hace que las dos aplicaciones miren la misma biblioteca en vez de dos copias.
+Pliego no tiene servidor propio. Los libros viven en cuatro sitios a la vez y
+**la regla es que nunca se sustituye una copia por otra: se funden**, libro a
+libro y por fecha (`src/datos/fusion.ts`, con pruebas).
 
 | Dónde | Qué es | Cuándo responde |
 | --- | --- | --- |
 | **Tu ordenador** | La API de Alexandria (`/writing/*`, NestJS en el 4000). Escribe los `.md` de verdad, en Drive. | Con el PC encendido, en casa o por el túnel |
-| **La nube** | La función de Netlify de Alexandria (`/api/nube/*`): un espejo cifrado de los libros + una cola de escrituras | Siempre |
+| **Tu cuenta** | La función de Netlify de Pliego (`/api/auth/datos`) sobre Netlify Blobs. No necesita la clave de la biblioteca: basta con haber entrado. | Siempre |
+| **La nube** | La función de Alexandria (`/api/nube/*`): un espejo cifrado + una cola de escrituras | Siempre, con la clave |
 | **Este navegador** | Una copia local, para abrir al instante y no perder nada si se cae la red | Siempre |
 
-Con el ordenador encendido se escribe el archivo real. Con el ordenador apagado
-el texto va **al espejo cifrado** (para que se vea al momento en el móvil o en
-otro PC) **y a la cola** (para que el ordenador lo aplique al `.md` cuando
-vuelva). Las dos cosas, no una: el espejo solo sería una copia que nunca llega a
-ser el libro.
+Al abrir la estantería se pregunta a los cuatro **en paralelo**, se funde lo que
+conteste y **se le devuelve la fusión a todos**. Eso es lo que hace que un
+capítulo escrito en el ordenador de clase aparezca en casa, y que acabe siendo
+un `.md` en Drive en cuanto el ordenador se enciende, sin hacer nada.
 
-El cifrado se hace **aquí, en el navegador**, con la misma clave que abre la
-biblioteca publicada de Alexandria (`biblioteca.clave.txt`). Netlify solo guarda
-bytes que nadie de allí puede leer, y el testigo de acceso es una derivación de
-un solo sentido que no sirve para descifrar nada.
+> **El fallo que esto arregló.** Antes cada fuente se creía la lista entera: si
+> el ordenador respondía, su catálogo *sustituía* al de la cuenta, así que lo
+> escrito en el portátil desaparecía de la estantería nada más abrir Pliego en
+> casa — y, en el otro sentido, los libros del ordenador no subían nunca a la
+> cuenta, de modo que el portátil no llegaba a verlos jamás. Los dos síntomas
+> eran el mismo error: sustituir en vez de fundir.
+
+Borrar deja una **lápida** (el slug y cuándo se borró) que viaja como un libro
+más y gana a cualquier copia anterior a ella. Sin eso, el primer dispositivo que
+llevara una semana apagado resucitaría lo borrado al volver.
+
+La fusión se vuelve a mirar al volver a la pestaña, al recuperar la conexión y
+cada tres minutos con la pestaña delante (`src/datos/latido.ts`). Y el guardado
+sale a los tres destinos **a la vez**, no en fila: encadenados costaban la espera
+del túnel más la de la nube más la de la cuenta, y eso se nota escribiendo.
+
+El cifrado de la nube se hace **aquí, en el navegador**, con la misma clave que
+abre la biblioteca publicada de Alexandria (`biblioteca.clave.txt`). Netlify solo
+guarda bytes que nadie de allí puede leer, y el testigo de acceso es una
+derivación de un solo sentido que no sirve para descifrar nada.
 
 > El protocolo exacto está documentado en `src/datos/nube.ts`. **Si cambia ahí,
 > tiene que cambiar en `apps/web/src/lib/cloud-store.ts` de Alexandria y en
 > `netlify/functions/nube.mjs`, o las dos aplicaciones dejan de verse.**
+>
+> La aritmética de la fusión está DUPLICADA a propósito en
+> `netlify/functions/auth.mjs`, para que el almacén de la cuenta converja aunque
+> dos dispositivos escriban a la vez. Si cambia `fusion.ts`, cambia allí.
+
+## Escribir a gusto
+
+Lo que hace que apetezca escribir aquí, y por qué cada cosa está como está:
+
+- **Ctrl+Z funciona.** Toda edición que hace el programa —negrita, cursiva,
+  capítulo, y sobre todo la tipografía automática— se aplica con
+  `execCommand("insertText")` sobre el trozo que cambia, no poniendo el texto
+  entero por estado (`src/ui/area.ts`). Poner el valor entero hace que el
+  navegador **tire su pila de deshacer**: bastaba con escribir `...` para perder
+  todo lo deshacible del último rato.
+- **La línea que escribes no se pega al borde de abajo.** Se mide la posición
+  real del cursor en píxeles y se mantiene por encima del último cuarto de la
+  pantalla; con «escribir en el centro», clavada a media altura.
+- **Pantalla completa de verdad.** El modo escritura esconde la aplicación *y*
+  el navegador (F11, Esc para salir). Y Pliego es instalable: como aplicación
+  abre sin barra de direcciones ni pestañas, que es la única forma de conseguir
+  eso en un iPhone.
+- **Funciona sin conexión.** Un trabajador de servicio guarda la aplicación
+  (`public/sw.js`): documento a red primero, `assets` con hash desde la caché, y
+  la API nunca se toca.
+- **Nada se pierde entre pulsación y guardado.** El archivo entero cae en este
+  navegador cada 700 ms y al esconder la pestaña (`src/datos/borrador.ts`); si
+  al abrir un libro hay borrador, es que algo se quedó a medias, y se recupera.
 
 ## Compatibilidad con Alexandria
 
@@ -105,7 +150,7 @@ quieres ver tus libros de verdad.
 | --- | --- |
 | `pnpm dev` | Servidor de desarrollo |
 | `pnpm build` | Comprueba tipos y compila a `dist/` |
-| `pnpm test` | Los tests del núcleo |
+| `pnpm test` | Los tests del núcleo y de la fusión |
 | `pnpm type-check` | Solo los tipos |
 
 ## Cómo está montado
@@ -122,6 +167,10 @@ src/
 │   ├── pagina.ts       folios, cornisas, ornamentos
 │   └── recetas.ts      diseños completos de un botón
 ├── datos/       De dónde salen y adónde van los libros.
+│   ├── fusion.ts       cómo se juntan dos copias sin perder nada (probado)
+│   ├── biblioteca.ts   preguntar a los cuatro sitios, fundir, repartir
+│   ├── latido.ts       cuándo se vuelve a mirar
+│   └── borrador.ts     el cinturón de seguridad
 ├── vistas/      Las pantallas.
 ├── ui/          Iconos, avisos, diálogos.
 └── estilos/     base (tokens y temas), app (la sala), pagina (la hoja)
