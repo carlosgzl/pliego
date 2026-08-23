@@ -386,32 +386,51 @@ function Obra({
 }
 
 const TEXTO_ORIGEN: Record<Catalogo["via"], string> = {
-  servidor: "Guardando en tu ordenador",
-  cuenta: "Guardando en tu cuenta",
-  nube: "Guardando en la nube",
+  servidor: "En tu ordenador y en tu cuenta",
+  cuenta: "En tu cuenta",
+  nube: "En la nube",
   local: "Solo en este navegador",
 };
 
-const EXPLICA_ORIGEN: Record<Catalogo["via"], string> = {
-  cuenta:
-    "Tus libros están en tu cuenta: entra con ella en cualquier ordenador y los tendrás ahí.",
-  servidor:
-    "El ordenador está encendido y responde: los libros se escriben en los archivos de verdad, en Drive.",
-  nube: "El ordenador no responde. Se escribe en la nube cifrada y el ordenador lo aplicará a los archivos cuando vuelva.",
-  local:
-    "Ni el ordenador ni la nube responden. Lo que escribas vive solo en este navegador hasta que haya conexión.",
-};
+/**
+ * Qué está contestando, en una frase por sitio.
+ *
+ * Ya no es «de dónde salen los libros»: salen de los cuatro sitios a la vez y
+ * se funden. Lo que importa saber de un vistazo es OTRA COSA — si lo que estás
+ * escribiendo va a aparecer en tus otros navegadores, y si va a acabar siendo
+ * un archivo de verdad. Eso es lo que se cuenta aquí.
+ */
+function explicar(catalogo: Catalogo): string {
+  const lineas = [
+    catalogo.servidorVivo
+      ? "· Tu ordenador responde: los libros se están escribiendo en los .md de Drive."
+      : "· Tu ordenador no responde. Lo que escribas queda en cola y él lo aplicará al archivo cuando vuelva.",
+    catalogo.cuentaViva
+      ? "· Tu cuenta responde: esto mismo se ve entrando en cualquier otro navegador."
+      : "· Tu cuenta no responde, así que de momento esto no viaja a tus otros navegadores.",
+    catalogo.nubeViva
+      ? "· La nube cifrada responde."
+      : "· La nube cifrada no responde (o falta la clave de la biblioteca).",
+  ];
+  return `${lineas.join("\n")}\n\nPulsa para sincronizar ahora.`;
+}
 
 function Origen({ catalogo, onRecargar }: { catalogo: Catalogo; onRecargar: () => void }) {
+  /* El punto va por lo que de verdad preocupa: que los libros lleguen a algún
+     sitio que no sea esta pestaña. Con la cuenta o el ordenador vivos, está
+     resuelto. */
+  const via = catalogo.servidorVivo
+    ? "servidor"
+    : catalogo.cuentaViva
+      ? "cuenta"
+      : catalogo.nubeViva
+        ? "nube"
+        : "local";
+  const texto = catalogo.servidorVivo && !catalogo.cuentaViva ? "En tu ordenador" : TEXTO_ORIGEN[via];
   return (
-    <button
-      type="button"
-      className="origen"
-      onClick={onRecargar}
-      title={`${EXPLICA_ORIGEN[catalogo.via]}\n\nPulsa para volver a intentarlo.`}
-    >
-      <span className={`origen__punto origen__punto--${catalogo.via}`} />
-      {TEXTO_ORIGEN[catalogo.via]}
+    <button type="button" className="origen" onClick={onRecargar} title={explicar(catalogo)}>
+      <span className={`origen__punto origen__punto--${via}`} />
+      {texto}
     </button>
   );
 }

@@ -1,32 +1,54 @@
 /**
- * The library, from the app's point of view: books in, books out.
+ * La biblioteca: libros que entran, libros que salen, y cuatro sitios donde
+ * viven a la vez.
  *
- * Three places hold the same books, and the whole design is about which one
- * answers and how the other two catch up:
+ *   servidor  el ordenador de casa. Tiene los .md DE VERDAD, en Drive. Cuando
+ *             responde, es el que convierte lo escrito en un archivo.
+ *   cuenta    el almacén de Netlify de su cuenta. Siempre encendido y sin
+ *             necesitar la clave de la biblioteca: es el puente entre el
+ *             portátil, el móvil y el ordenador de clase.
+ *   nube      el espejo cifrado de Alexandria, más la cola que el ordenador
+ *             vacía en los .md cuando vuelve. Necesita la clave.
+ *   local     este navegador. Para abrir al instante y no perder un párrafo
+ *             porque parpadee la red.
  *
- *   servidor  the PC. It owns the REAL Markdown files on Drive. When it is
- *             reachable, it is the truth and everything else is a copy.
- *   nube      Alexandria's encrypted store. Always on, reachable from a phone
- *             or a classroom with the PC unplugged. Holds a MIRROR of the books
- *             plus a queue of writes the PC has not applied yet.
- *   local     this browser. So the app opens instantly, works on a train, and
- *             never loses a paragraph because a network blinked.
+ * LO QUE ESTABA MAL, Y ES EL MOTIVO DE ESTA REESCRITURA. Cada fuente se creía
+ * la lista entera. Si el ordenador respondía, su catálogo SUSTITUÍA al de la
+ * cuenta y al de este navegador: lo escrito en el portátil desaparecía de la
+ * estantería nada más abrir Pliego en casa. Y al revés — con el ordenador
+ * respondiendo no se subía nada a la cuenta, así que sus libros no llegaban
+ * jamás al portátil. Los dos síntomas eran el mismo fallo: sustituir en vez de
+ * fundir.
  *
- * THE RULE THAT MATTERS: a save is only reported as saved when it has landed
- * somewhere that survives closing the tab. Writing to the PC counts. Writing to
- * the cloud counts. Writing to this browser alone does NOT — it is a cache, and
- * the app says so plainly instead of showing a green tick over a manuscript
- * that exists on one device.
+ * AHORA: se pregunta a las cuatro EN PARALELO, se funde lo que conteste
+ * (`fusion.ts`, libro a libro y por fecha) y **se devuelve la fusión a todas**.
+ * Ninguna fuente puede encoger la estantería, y cualquiera de ellas basta para
+ * repartir un capítulo a las demás. Un libro escrito en clase acaba siendo un
+ * .md en Drive en cuanto el ordenador se enciende, sin hacer nada.
  *
- * Conflicts are resolved by time, per book, never by merge. Two devices editing
- * one chapter at once is not a case this solves, and pretending otherwise would
- * lose prose; the newest write wins and the older one is kept as a rescue copy
- * in this browser.
+ * LA REGLA QUE NO SE TOCA: un guardado solo se canta como guardado cuando ha
+ * caído en algún sitio que sobreviva a cerrar la pestaña. Este navegador no
+ * cuenta — es una caché, y se dice tal cual en vez de enseñar un visto verde
+ * sobre un manuscrito que existe en un único dispositivo.
+ *
+ * Los conflictos se resuelven por fecha y por libro, nunca fundiendo texto. Dos
+ * dispositivos escribiendo el mismo capítulo a la vez no es un caso que esto
+ * resuelva, y fingir que sí perdería prosa: gana el más nuevo y el otro queda
+ * como copia de rescate en este navegador.
  */
 
 import { contarPalabras } from "@/nucleo/bloques";
 import { componer, descomponer, metaPorDefecto, type Meta } from "@/nucleo/libro";
-import { guardarEnCuenta, leerDeCuenta, mezclar } from "./cuenta";
+import { guardarEnCuenta, hayCuenta, leerDeCuenta } from "./cuenta";
+import { hayClave } from "./clave";
+import {
+  bibliotecaVacia,
+  fundir,
+  fundirTodas,
+  loQueFalta,
+  normalizar,
+  type Biblioteca,
+} from "./fusion";
 import { encolarCambio, escribirDoc, leerDoc, type ResultadoEscritura } from "./nube";
 import {
   borrarEnServidor,
@@ -34,9 +56,10 @@ import {
   leerEnServidor,
   listarEnServidor,
   renombrarEnServidor,
+  type LibroServidor,
 } from "./servidor";
 
-/** The mirror document inside Alexandria's cloud store. */
+/** El documento espejo dentro del almacén cifrado de Alexandria. */
 const DOC_ESPEJO = "escritorio";
 const CACHE_LIBROS = "pliego.libros";
 const CACHE_RESCATE = "pliego.rescate";
@@ -50,38 +73,48 @@ export interface LibroResumen {
   actualizado: string;
 }
 
-interface Espejo {
-  /** slug → the whole file, plus when this copy was written. */
-  libros: Record<string, { contenido: string; at: number }>;
-}
+/* ── La copia de este navegador ───────────────────────────────────────────── */
 
-/* ── This browser's copy ──────────────────────────────────────────────────── */
-
-function leerCache(): Espejo {
+function leerCache(): Biblioteca {
   try {
-    const crudo = localStorage.getItem(CACHE_LIBROS);
-    if (!crudo) {
-      return { libros: {} };
-    }
-    const analizado = JSON.parse(crudo) as Espejo;
-    return analizado?.libros ? analizado : { libros: {} };
+    return normalizar(JSON.parse(localStorage.getItem(CACHE_LIBROS) ?? "null"));
   } catch {
-    return { libros: {} };
+    return bibliotecaVacia();
   }
 }
 
-function escribirCache(espejo: Espejo): void {
+function escribirCache(biblioteca: Biblioteca): void {
   try {
-    localStorage.setItem(CACHE_LIBROS, JSON.stringify(espejo));
+    localStorage.setItem(CACHE_LIBROS, JSON.stringify(biblioteca));
   } catch {
-    // Quota, or private mode. The book is still on the server or in the cloud;
-    // only the offline copy is missing, and the status line will say so.
+    // Cuota, o modo privado. El libro sigue en el servidor o en la nube; lo que
+    // falta es la copia para abrir sin red, y la línea de estado lo dice.
   }
 }
 
 /**
- * Keep a copy of what we are about to overwrite with someone else's newer
- * version. Nothing in this app should ever be the reason a paragraph is gone.
+ * Quien quiera enterarse de que la estantería ha cambiado por detrás.
+ *
+ * Hace falta porque la sincronización ya no ocurre solo cuando alguien pulsa
+ * algo: pasa al volver a la pestaña, al recuperar la red y cada pocos minutos.
+ * Sin un aviso, la estantería enseñaría lo de hace media hora.
+ */
+const oyentes = new Set<() => void>();
+
+export function alCambiarBiblioteca(oyente: () => void): () => void {
+  oyentes.add(oyente);
+  return () => oyentes.delete(oyente);
+}
+
+export function notificarCambio(): void {
+  for (const oyente of oyentes) {
+    oyente();
+  }
+}
+
+/**
+ * Guardar lo que estamos a punto de tapar con una versión más nueva de otro
+ * sitio. Nada de aquí puede ser el motivo de que un párrafo ya no esté.
  */
 function guardarRescate(slug: string, contenido: string): void {
   try {
@@ -92,7 +125,7 @@ function guardarRescate(slug: string, contenido: string): void {
     previo[slug] = { contenido, at: new Date().toISOString() };
     localStorage.setItem(CACHE_RESCATE, JSON.stringify(previo));
   } catch {
-    // If even this fails there is nothing more we can do here.
+    // Si hasta esto falla, ya no hay nada más que se pueda hacer aquí.
   }
 }
 
@@ -117,190 +150,284 @@ export function olvidarRescate(slug: string): void {
     delete guardado[slug];
     localStorage.setItem(CACHE_RESCATE, JSON.stringify(guardado));
   } catch {
-    // Nothing to forget.
+    // Nada que olvidar.
   }
 }
 
-/* ── Reading ──────────────────────────────────────────────────────────────── */
+/* ── Leer ─────────────────────────────────────────────────────────────────── */
 
 export interface Catalogo {
   libros: LibroResumen[];
-  /** Which of the three answered. */
+  /** La mejor de las que contestaron: en qué se apoya lo que se ve. */
   via: Via;
-  /** True when the PC is reachable, so the files on Drive are being written. */
+  /** El ordenador responde, así que se están escribiendo los .md de Drive. */
   servidorVivo: boolean;
-  /** True when the cloud answered, so other devices will see this. */
+  /** La nube cifrada contestó. */
   nubeViva: boolean;
+  /** La cuenta contestó: lo de aquí se verá en los demás navegadores. */
+  cuentaViva: boolean;
 }
 
-function resumir(slug: string, contenido: string, actualizado: string): LibroResumen {
+function resumir(slug: string, contenido: string, at: number): LibroResumen {
   const { meta, cuerpo } = descomponer(contenido);
-  return { slug, meta, palabras: contarPalabras(cuerpo), actualizado };
+  return { slug, meta, palabras: contarPalabras(cuerpo), actualizado: new Date(at).toISOString() };
+}
+
+function catalogar(biblioteca: Biblioteca): LibroResumen[] {
+  return Object.entries(biblioteca.libros)
+    .map(([slug, dato]) => resumir(slug, dato.contenido, dato.at))
+    .sort((a, b) => b.actualizado.localeCompare(a.actualizado));
 }
 
 /**
- * Every book, newest first, from whichever source can answer.
+ * El ordenador, como biblioteca.
  *
- * When the PC answers, its books are pushed into the cloud mirror as well —
- * that is what makes them readable later from a phone with the PC off, and it
- * costs one request that nobody is waiting on.
+ * Solo se descarga el contenido de los libros que allí son más nuevos que aquí:
+ * una novela son cientos de kB y volver a bajar los ocho libros enteros cada
+ * vez que se abre la estantería es medio segundo de espera que no compra nada.
  */
-export async function cargarCatalogo(): Promise<Catalogo> {
-  const enServidor = await listarEnServidor();
+async function pedirServidor(
+  cache: Biblioteca,
+): Promise<{ biblioteca: Biblioteca; lista: LibroServidor[] } | null> {
+  const lista = await listarEnServidor();
+  if (!lista) {
+    return null;
+  }
+  const biblioteca = bibliotecaVacia();
+  await Promise.all(
+    lista.map(async (libro) => {
+      const at = Date.parse(libro.updatedAt) || Date.now();
+      const aqui = cache.libros[libro.slug];
+      if (aqui && aqui.at >= at) {
+        // Lo de aquí es igual o más nuevo: no hace falta bajarlo otra vez, y
+        // fundir se queda igualmente con lo correcto.
+        biblioteca.libros[libro.slug] = { contenido: aqui.contenido, at };
+        return;
+      }
+      const contenido = await leerEnServidor(libro.slug);
+      if (contenido !== null) {
+        biblioteca.libros[libro.slug] = { contenido, at };
+      }
+    }),
+  );
+  return { biblioteca, lista };
+}
 
-  if (enServidor) {
-    const contenidos = await Promise.all(
-      enServidor.map(async (libro) => ({
-        slug: libro.slug,
-        actualizado: libro.updatedAt,
-        contenido: (await leerEnServidor(libro.slug)) ?? "",
-      })),
-    );
-    const espejo: Espejo = { libros: {} };
-    for (const libro of contenidos) {
-      espejo.libros[libro.slug] = {
-        contenido: libro.contenido,
-        at: Date.parse(libro.actualizado) || Date.now(),
-      };
+async function pedirNube(): Promise<Biblioteca | null> {
+  if (!hayClave()) {
+    return null;
+  }
+  try {
+    const doc = await leerDoc<unknown>(DOC_ESPEJO);
+    return doc?.valor ? normalizar(doc.valor) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Preguntar a todos, fundir, y devolverles a todos la fusión.
+ *
+ * La segunda mitad es la que hace que esto sirva de algo: sin ella, cada
+ * dispositivo se quedaria con la estantería completa en su pantalla y las
+ * fuentes seguirian desparejas para siempre.
+ */
+export async function sincronizar(): Promise<Catalogo> {
+  const cache = leerCache();
+
+  const [delServidor, deCuenta, deNube] = await Promise.all([
+    pedirServidor(cache).catch(() => null),
+    hayCuenta() ? leerDeCuenta().catch(() => null) : Promise.resolve(null),
+    pedirNube(),
+  ]);
+
+  const fundida = fundirTodas(cache, delServidor?.biblioteca, deCuenta, deNube);
+  escribirCache(fundida);
+
+  const servidorVivo = delServidor !== null;
+  const nubeViva = deNube !== null;
+
+  /* Devolver la fusión a la cuenta se ESPERA, porque su respuesta puede traer
+     un capítulo de otro dispositivo escrito hace un segundo; lo demás se manda
+     sin esperar, que la estantería no tiene por qué mirar a la red para
+     pintarse. */
+  let final = fundida;
+  let cuentaViva = false;
+  if (hayCuenta()) {
+    const vuelta = await guardarEnCuenta(fundida).catch(() => null);
+    if (vuelta) {
+      cuentaViva = true;
+      final = fundir(fundida, vuelta);
+      escribirCache(final);
     }
-    escribirCache(espejo);
-    // Not awaited: the shelf must not wait on the network to paint.
-    const subida = escribirDoc(DOC_ESPEJO, espejo).catch(() => "inalcanzable" as const);
-    const nubeViva = (await Promise.race([subida, esperar(2500)])) === "ok";
-    return {
-      libros: ordenar(
-        contenidos.map((libro) => resumir(libro.slug, libro.contenido, libro.actualizado)),
-      ),
-      via: "servidor",
-      servidorVivo: true,
-      nubeViva,
-    };
   }
 
-  /*
-   * La cuenta, que es lo que hace que los dos ordenadores vean lo mismo.
-   *
-   * Va ANTES que la nube cifrada porque no necesita la clave de la biblioteca:
-   * basta con haber entrado. La nube sigue detrás para quien tenga la clave y
-   * quiera que sus libros acaben en los .md de Drive.
-   */
-  const enCuenta = await leerDeCuenta();
-  if (enCuenta && Object.keys(enCuenta.libros ?? {}).length > 0) {
-    const mezcla = mezclar(leerCache().libros, enCuenta.libros);
-    escribirCache({ libros: mezcla });
-    void guardarEnCuenta({ libros: mezcla });
-    return {
-      libros: ordenar(desdeEspejo({ libros: mezcla })),
-      via: "cuenta",
-      servidorVivo: false,
-      nubeViva: false,
-    };
-  }
-
-  const doc = await leerDoc<Espejo>(DOC_ESPEJO);
-  if (doc?.valor?.libros) {
-    escribirCache(doc.valor);
-    return {
-      libros: ordenar(desdeEspejo(doc.valor)),
-      via: "nube",
-      servidorVivo: false,
-      nubeViva: true,
-    };
-  }
+  void repartir(final, delServidor?.lista ?? null, nubeViva);
 
   return {
-    libros: ordenar(desdeEspejo(leerCache())),
-    via: "local",
-    servidorVivo: false,
-    nubeViva: doc !== null,
+    libros: catalogar(final),
+    via: servidorVivo ? "servidor" : cuentaViva ? "cuenta" : nubeViva ? "nube" : "local",
+    servidorVivo,
+    nubeViva,
+    cuentaViva,
   };
 }
 
-function desdeEspejo(espejo: Espejo): LibroResumen[] {
-  return Object.entries(espejo.libros).map(([slug, dato]) =>
-    resumir(slug, dato.contenido, new Date(dato.at).toISOString()),
-  );
+/** El nombre viejo, que es el que llama la pantalla de inicio. */
+export const cargarCatalogo = sincronizar;
+
+/**
+ * Lo que le falta a cada sitio, enviado sin que nadie espere.
+ *
+ * Al ordenador se le mandan los libros que aquí son más nuevos —que es como un
+ * capítulo escrito en clase acaba siendo un .md de Drive— y se le pide que
+ * borre los que tengan lápida. A la nube se le manda el espejo entero, que es
+ * un solo documento.
+ */
+async function repartir(
+  biblioteca: Biblioteca,
+  enServidor: LibroServidor[] | null,
+  nubeViva: boolean,
+): Promise<void> {
+  if (enServidor) {
+    const suya: Biblioteca = { libros: {}, borrados: {} };
+    for (const libro of enServidor) {
+      suya.libros[libro.slug] = { contenido: "", at: Date.parse(libro.updatedAt) || 0 };
+    }
+    let repartido = false;
+    for (const slug of loQueFalta(biblioteca, suya)) {
+      repartido = (await guardarEnServidor(slug, biblioteca.libros[slug]!.contenido).catch(
+        () => false,
+      )) || repartido;
+    }
+    for (const slug of Object.keys(biblioteca.borrados)) {
+      if (suya.libros[slug]) {
+        await borrarEnServidor(slug).catch(() => false);
+      }
+    }
+    if (repartido) {
+      notificarCambio();
+    }
+  }
+
+  if (nubeViva) {
+    await escribirDoc(DOC_ESPEJO, biblioteca).catch(() => "inalcanzable" as const);
+  }
 }
 
-function ordenar(libros: LibroResumen[]): LibroResumen[] {
-  return libros.sort((a, b) => b.actualizado.localeCompare(a.actualizado));
-}
-
-function esperar(ms: number): Promise<"tarde"> {
-  return new Promise((resolver) => setTimeout(() => resolver("tarde"), ms));
-}
-
-/** One book's whole file, from wherever it can be had. */
+/**
+ * El archivo entero de un libro.
+ *
+ * De la caché si esta, que es abrir al instante; de la red solo cuando este
+ * navegador no lo ha visto nunca. Lo que mantiene el texto al día no es esta
+ * funcion sino la sincronización de fondo, que avisa por `alCambiarBiblioteca`
+ * — y asi abrir un capítulo no depende de que conteste un túnel.
+ */
 export async function leerLibro(slug: string): Promise<string | null> {
-  const delServidor = await leerEnServidor(slug);
+  const cache = leerCache();
+  const aqui = cache.libros[slug];
+  if (aqui) {
+    return aqui.contenido;
+  }
+
+  const [delServidor, deCuenta, deNube] = await Promise.all([
+    leerEnServidor(slug).catch(() => null),
+    hayCuenta() ? leerDeCuenta().catch(() => null) : Promise.resolve(null),
+    pedirNube(),
+  ]);
+
+  const candidatos: Biblioteca[] = [cache];
   if (delServidor !== null) {
-    const espejo = leerCache();
-    espejo.libros[slug] = { contenido: delServidor, at: Date.now() };
-    escribirCache(espejo);
-    return delServidor;
+    candidatos.push({
+      libros: { [slug]: { contenido: delServidor, at: Date.now() } },
+      borrados: {},
+    });
   }
-  const doc = await leerDoc<Espejo>(DOC_ESPEJO);
-  const enNube = doc?.valor?.libros?.[slug];
-  if (enNube) {
-    return enNube.contenido;
+  if (deCuenta) {
+    candidatos.push(deCuenta);
   }
-  return leerCache().libros[slug]?.contenido ?? null;
+  if (deNube) {
+    candidatos.push(deNube);
+  }
+  const fundida = fundirTodas(...candidatos);
+  escribirCache(fundida);
+  return fundida.libros[slug]?.contenido ?? null;
 }
 
-/* ── Writing ──────────────────────────────────────────────────────────────── */
+/** Lo que este navegador tiene de un libro ahora mismo, sin tocar la red. */
+export function leerLibroDeCache(slug: string): { contenido: string; at: number } | null {
+  return leerCache().libros[slug] ?? null;
+}
+
+/* ── Escribir ─────────────────────────────────────────────────────────────── */
 
 export interface ResultadoGuardado {
-  /** Where it actually landed. Empty means nowhere durable. */
+  /** Dónde ha caído de verdad. Vacío significa en ningun sitio duradero. */
   en: Via[];
-  /** True when the real .md file on Drive has (or will have) this text. */
+  /** El .md de Drive tiene (o va a tener) este texto. */
   enDisco: boolean;
-  /** Set when nothing durable took it, so the UI can say why. */
+  /** Puesto cuando nada duradero se lo quedó, para poder decir por qué. */
   problema?: string;
 }
 
 /**
- * Save a book.
+ * Guardar un libro.
  *
- * With the PC up this is one request and the file on Drive changes. With the PC
- * down the text goes to the cloud mirror (so every other device sees it now)
- * AND into the queue the PC drains when it wakes (so the file catches up). Both,
- * not either: the mirror alone would be a copy that never becomes the book.
+ * Los tres destinos salen A LA VEZ, no en fila. Encadenados, un guardado desde
+ * la web desplegada con el ordenador apagado costaba el tiempo de espera del
+ * túnel MÁS el de la nube MÁS el de la cuenta —doce segundos largos— y eso se
+ * nota escribiendo: la línea de estado se queda en «guardando…» y el siguiente
+ * guardado ya viene pisando. En paralelo cuesta lo que el más lento.
  */
 export async function guardarLibro(slug: string, contenido: string): Promise<ResultadoGuardado> {
   const ahora = Date.now();
-  const espejo = leerCache();
-  espejo.libros[slug] = { contenido, at: ahora };
-  escribirCache(espejo);
+  const biblioteca = leerCache();
+  biblioteca.libros[slug] = { contenido, at: ahora };
+  delete biblioteca.borrados[slug];
+  escribirCache(biblioteca);
 
-  const enServidor = await guardarEnServidor(slug, contenido);
-  const enNube = await subirEspejo(espejo, ahora);
-  /* La cuenta se actualiza SIEMPRE que haya sesión, responda quien responda:
-     es la copia que verá el otro ordenador, y es la barata de mantener. */
-  const enCuenta = await guardarEnCuenta({ libros: espejo.libros });
+  const [enServidor, enNube, deCuenta] = await Promise.all([
+    guardarEnServidor(slug, contenido).catch(() => false),
+    subirEspejo(biblioteca),
+    hayCuenta() ? guardarEnCuenta(biblioteca).catch(() => null) : Promise.resolve(null),
+  ]);
+
+  if (deCuenta) {
+    /* La vuelta de la cuenta puede traer un libro que otro dispositivo acaba de
+       escribir. Fundirla aquí es lo que hace que aparezca sin recargar. */
+    const final = fundir(biblioteca, deCuenta);
+    escribirCache(final);
+    if (Object.keys(final.libros).length !== Object.keys(biblioteca.libros).length) {
+      notificarCambio();
+    }
+  }
+
+  const sitios: Via[] = [];
+  if (enServidor) {
+    sitios.push("servidor");
+  }
+  if (deCuenta) {
+    sitios.push("cuenta");
+  }
+  if (enNube === "ok") {
+    sitios.push("nube");
+  }
 
   if (enServidor) {
-    const sitios: Via[] = ["servidor"];
-    if (enNube === "ok") {
-      sitios.push("nube");
-    }
-    if (enCuenta) {
-      sitios.push("cuenta");
-    }
     return { en: sitios, enDisco: true };
   }
 
-  const encolado = await encolarCambio("PUT", "/writing/book", { slug, content: contenido });
-  if (enCuenta) {
+  /* Sin ordenador, el texto va a la cola para que el lo aplique al .md cuando
+     vuelva. Es lo que separa «una copia» de «el libro». */
+  const encolado = await encolarCambio("PUT", "/writing/book", { slug, content: contenido }).catch(
+    () => false,
+  );
+
+  if (sitios.length > 0) {
     return {
-      en: enNube === "ok" ? ["cuenta", "nube"] : ["cuenta"],
+      en: sitios,
       enDisco: encolado,
-    };
-  }
-  if (enNube === "ok" || encolado) {
-    return {
-      en: ["nube"],
-      enDisco: encolado,
-      ...(encolado
+      ...(encolado || sitios.includes("cuenta")
         ? {}
         : { problema: "Guardado en la nube, pero el ordenador aún no lo tiene en cola." }),
     };
@@ -310,28 +437,45 @@ export async function guardarLibro(slug: string, contenido: string): Promise<Res
     en: [],
     enDisco: false,
     problema:
-      enNube === "sin-clave"
-        ? "Sin la clave de la biblioteca no se puede guardar fuera de este navegador."
-        : enNube === "demasiado-grande"
-          ? "El conjunto de libros no cabe ya en la nube. Archiva alguno."
-          : "Sin conexión con el ordenador ni con la nube: solo está en este navegador.",
+      enNube === "demasiado-grande"
+        ? "El conjunto de libros no cabe ya en la nube. Archiva algúno."
+        : hayCuenta()
+          ? "Sin conexión: de momento solo esta en este navegador."
+          : "Entra con tu cuenta para que lo escrito llegue a tus otros navegadores.",
   };
 }
 
-async function subirEspejo(espejo: Espejo, at: number): Promise<ResultadoEscritura> {
+async function subirEspejo(biblioteca: Biblioteca): Promise<ResultadoEscritura> {
+  if (!hayClave()) {
+    return "sin-clave";
+  }
   try {
-    return await escribirDoc(DOC_ESPEJO, espejo, at);
+    return await escribirDoc(DOC_ESPEJO, biblioteca, Date.now());
   } catch {
     return "inalcanzable";
   }
 }
 
-/** Start a book. Returns its slug, which is the file name it will have. */
+/** Empezar un libro. Devuelve su slug, que es el nombre que tendrá el archivo. */
 export async function crearLibro(titulo: string): Promise<string> {
-  const slug = limpiarSlug(titulo);
+  const slug = libreDe(limpiarSlug(titulo));
   const meta = metaPorDefecto(titulo);
   await guardarLibro(slug, componer(meta, "# Primero\n\n"));
   return slug;
+}
+
+/** Un slug que no pise a otro libro: «Título», «Título 2», «Título 3»… */
+function libreDe(slug: string): string {
+  const libros = leerCache().libros;
+  if (!libros[slug]) {
+    return slug;
+  }
+  for (let n = 2; n < 500; n += 1) {
+    if (!libros[`${slug} ${n}`]) {
+      return `${slug} ${n}`;
+    }
+  }
+  return `${slug} ${Date.now()}`;
 }
 
 export async function duplicarLibro(slug: string): Promise<string | null> {
@@ -341,60 +485,81 @@ export async function duplicarLibro(slug: string): Promise<string | null> {
   }
   const { meta, cuerpo } = descomponer(original);
   const copia = `${meta.titulo} (copia)`;
-  const nuevo = limpiarSlug(copia);
+  const nuevo = libreDe(limpiarSlug(copia));
   await guardarLibro(nuevo, componer({ ...meta, titulo: copia }, cuerpo));
   return nuevo;
 }
 
 export async function renombrarLibro(desde: string, hasta: string): Promise<boolean> {
   const limpio = limpiarSlug(hasta);
+  if (limpio === desde) {
+    return true;
+  }
   const contenido = await leerLibro(desde);
   if (contenido === null) {
     return false;
   }
-  const enServidor = await renombrarEnServidor(desde, limpio);
-  const espejo = leerCache();
-  espejo.libros[limpio] = espejo.libros[desde] ?? { contenido, at: Date.now() };
-  delete espejo.libros[desde];
-  escribirCache(espejo);
-  await subirEspejo(espejo, Date.now());
-  if (!enServidor) {
-    await encolarCambio("POST", "/writing/rename", { from: desde, to: limpio });
-  }
+
+  const ahora = Date.now();
+  const biblioteca = leerCache();
+  biblioteca.libros[limpio] = { contenido, at: ahora };
+  delete biblioteca.libros[desde];
+  /* El nombre viejo lleva lápida como cualquier borrado: si no, el portátil que
+     todavía tiene el libro con su nombre anterior lo devolvería a la
+     estantería y el mismo texto saldría dos veces. */
+  biblioteca.borrados[desde] = ahora;
+  escribirCache(biblioteca);
+
+  const enServidor = await renombrarEnServidor(desde, limpio).catch(() => false);
+  await Promise.all([
+    subirEspejo(biblioteca),
+    hayCuenta() ? guardarEnCuenta(biblioteca).catch(() => null) : Promise.resolve(null),
+    enServidor
+      ? Promise.resolve(true)
+      : encolarCambio("POST", "/writing/rename", { from: desde, to: limpio }).catch(() => false),
+  ]);
   return true;
 }
 
 export async function borrarLibro(slug: string): Promise<boolean> {
-  const contenido = await leerLibro(slug);
+  const contenido = leerCache().libros[slug]?.contenido ?? (await leerLibro(slug));
   if (contenido !== null) {
-    // Deleting a manuscript is the one action with no undo, so the text stays
-    // in this browser under "rescates" even when the file is gone.
+    // Borrar un manuscrito es la única acción sin deshacer, así que el texto se
+    // queda en este navegador como «rescate» aunque el archivo ya no esté.
     guardarRescate(slug, contenido);
   }
-  const enServidor = await borrarEnServidor(slug);
-  const espejo = leerCache();
-  delete espejo.libros[slug];
-  escribirCache(espejo);
-  await subirEspejo(espejo, Date.now());
-  if (!enServidor) {
-    await encolarCambio("DELETE", `/writing/book?slug=${encodeURIComponent(slug)}`, undefined);
-  }
+
+  const biblioteca = leerCache();
+  delete biblioteca.libros[slug];
+  biblioteca.borrados[slug] = Date.now();
+  escribirCache(biblioteca);
+
+  const enServidor = await borrarEnServidor(slug).catch(() => false);
+  await Promise.all([
+    subirEspejo(biblioteca),
+    hayCuenta() ? guardarEnCuenta(biblioteca).catch(() => null) : Promise.resolve(null),
+    enServidor
+      ? Promise.resolve(true)
+      : encolarCambio("DELETE", `/writing/book?slug=${encodeURIComponent(slug)}`, undefined).catch(
+          () => false,
+        ),
+  ]);
   return true;
 }
 
 /**
- * A title turned into a file name.
+ * Un título convertido en nombre de archivo.
  *
- * The server refuses anything that could climb out of the Escritorio folder or
- * break on Windows, so the same characters come off here — a book should not be
- * rejected after you have typed its name.
+ * El servidor rechaza cualquier cosa que pueda salirse de la carpeta Escritorio
+ * o romper en Windows, así que los mismos caracteres se quitan aquí — un libro
+ * no debería rechazarse después de haber escrito su nombre.
  */
 export function limpiarSlug(titulo: string): string {
   const limpio = titulo
     .replace(/[\\/]/g, "·")
     .replace(/\.\.+/g, ".")
     .replace(/[<>:"|?*]/g, "")
-    // Control characters are not legal in a Windows file name.
+    // Los caracteres de control no valen en un nombre de archivo de Windows.
     .replace(/\p{Cc}/gu, "")
     .replace(/\.md$/i, "")
     .trim();

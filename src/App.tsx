@@ -14,6 +14,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  alCambiarBiblioteca,
   borrarLibro,
   cargarCatalogo,
   crearLibro,
@@ -24,6 +25,7 @@ import {
 import { guardarAjustes, leerAjustes, type Ajustes } from "@/datos/ajustes";
 import { contarPalabras } from "@/nucleo/bloques";
 import { libroDeMuestra, SLUG_MUESTRA } from "@/datos/muestra";
+import { arrancarLatido, sincronizarYa } from "@/datos/latido";
 import { alCambiarSesion, hayEntrado, revisarSesion, salir } from "@/datos/sesion";
 import { aplicarAcento } from "@/ui/acento";
 import { avisar, Avisos } from "@/ui/Avisos";
@@ -100,19 +102,32 @@ export function App() {
     };
   }, []);
 
-  const recargar = useCallback(async () => {
+  const recargar = useCallback(async (callado = false) => {
     if (!hayEntrado()) {
       // Nothing is asked of the network for a visitor: no requests, no probing
       // of his machine, no half-second of spinner before an empty shelf.
-      setCatalogo({ libros: [muestra], via: "local", servidorVivo: false, nubeViva: false });
+      setCatalogo({
+        libros: [muestra],
+        via: "local",
+        servidorVivo: false,
+        nubeViva: false,
+        cuentaViva: false,
+      });
       setCargando(false);
       return;
     }
-    setCargando(true);
+    /* Un refresco de fondo NO enciende el esqueleto: la estantería que ya
+       está en pantalla es correcta, y hacerla parpadear cada tres minutos
+       sería peor que no refrescar. */
+    if (!callado) {
+      setCargando(true);
+    }
     try {
       setCatalogo(await cargarCatalogo());
     } catch {
-      avisar("No se ha podido leer la estantería.", "error");
+      if (!callado) {
+        avisar("No se ha podido leer la estantería.", "error");
+      }
     } finally {
       setCargando(false);
     }
@@ -121,6 +136,27 @@ export function App() {
   useEffect(() => {
     void recargar();
   }, [recargar, dentro]);
+
+  /*
+   * El latido y su escucha.
+   *
+   * `arrancarLatido` es quien va a la red —al volver a la pestaña, al recuperar
+   * la conexión y cada pocos minutos—; esto solo repinta cuando la biblioteca
+   * de este navegador ha cambiado de verdad. Separarlo así evita el error
+   * clásico: un `useEffect` que sincroniza y repinta y por tanto se vuelve a
+   * disparar a sí mismo.
+   */
+  useEffect(() => {
+    if (!dentro) {
+      return;
+    }
+    const parar = arrancarLatido();
+    const dejar = alCambiarBiblioteca(() => void recargar(true));
+    return () => {
+      parar();
+      dejar();
+    };
+  }, [dentro, recargar]);
 
   /* ── Navigation ──────────────────────────────────────────────────────────── */
 
@@ -230,7 +266,7 @@ export function App() {
             onRenombrar={(slug, nombre) => conSesion(() => void renombrar(slug, nombre))}
             onBorrar={(slug) => conSesion(() => void borrar(slug))}
             onAjustes={() => setAjustando(true)}
-            onRecargar={() => void recargar()}
+            onRecargar={() => void sincronizarYa(true).then(() => recargar(true))}
             onEntrar={() => setVisita(false)}
             onSalir={() => {
               salir();
@@ -244,7 +280,7 @@ export function App() {
               dentro={dentro}
               onAjustes={cambiarAjustes}
               onCerrar={() => setAjustando(false)}
-              onRecargar={() => void recargar()}
+              onRecargar={() => void sincronizarYa(true).then(() => recargar(true))}
             />
           )}
         </div>

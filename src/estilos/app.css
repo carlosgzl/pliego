@@ -242,6 +242,13 @@
   background: var(--bien);
 }
 
+/* La cuenta en verde como el ordenador: las dos respuestas que significan «esto
+   se va a ver en tus otros navegadores», que es lo único que se pregunta uno de
+   un vistazo. */
+.origen__punto--cuenta {
+  background: var(--bien);
+}
+
 .origen__punto--nube {
   background: var(--acento);
 }
@@ -497,17 +504,55 @@
   background: var(--ground);
   display: flex;
   justify-content: center;
+  /*
+   * `flex-start`, y no es un detalle: ES EL MOTIVO DE QUE ESCRIBIR AQUÍ FUERA
+   * INCÓMODO.
+   *
+   * Con el estirado de fábrica, la caja del manuscrito se quedaba con el alto
+   * del contenedor —617 px— y el texto le salía por abajo. Un hijo que se
+   * desborda no arrastra consigo el relleno inferior de su padre, así que el
+   * respiro de 40vh que hay ahí debajo NO EXISTÍA: el área desplazable acababa
+   * en la última línea, y la línea que estabas escribiendo se quedaba pegada al
+   * canto de la pantalla, sin nada debajo, siempre.
+   *
+   * Alineando arriba, la caja mide lo que mide su contenido, su relleno cuenta,
+   * y por fin hay pantalla por debajo de lo que se escribe.
+   */
+  align-items: flex-start;
 }
 
 .manuscrito__caja {
   width: 100%;
-  padding: 3rem 1.5rem 40vh; /* the tail is what lets the last line sit
-                                mid-screen instead of glued to the bottom */
+  padding: 3rem 1.5rem 45vh; /* la cola es lo que deja la última línea a media
+                                pantalla en vez de pegada al borde de abajo */
 }
 
 /* The textarea and its mirror stack in here, and MUST share every metric. */
 .manuscrito__pila {
   position: relative;
+}
+
+/*
+ * QUIÉN DECIDE LO ALTO QUE ES EL MANUSCRITO.
+ *
+ * Antes lo decidía JavaScript: en cada tecla se ponía el campo a `height:auto`,
+ * se leía su `scrollHeight` y se le devolvía esa altura. Son dos recálculos de
+ * diseño forzados por pulsación sobre un elemento que puede medir una novela, y
+ * era el tirón más gordo que tenía escribir aquí.
+ *
+ * Con espejo no hace falta nada de eso: el espejo tiene el mismo texto y las
+ * mismas métricas, así que basta con dejarlo en el flujo —él da el alto a la
+ * pila— y estirar el campo encima. El navegador lo resuelve solo, en el mismo
+ * paso de diseño que ya iba a hacer.
+ */
+.manuscrito__pila--espejo .manuscrito__espejo {
+  position: static;
+}
+
+.manuscrito__pila--espejo .manuscrito__area {
+  position: absolute;
+  inset: 0;
+  height: 100%;
 }
 
 .manuscrito__area,
@@ -539,6 +584,11 @@
 /* With the mirror painting the words, the real text has to get out of the way —
    but only when the mirror is actually there (see TOPE_RESALTADO). */
 .manuscrito--resaltado .manuscrito__area {
+  color: transparent;
+}
+
+/* El espejo mudo solo está para dar la altura: ni pinta ni se selecciona. */
+.manuscrito__espejo--mudo {
   color: transparent;
 }
 
@@ -760,6 +810,10 @@
 
 .salir-pantalla:hover {
   opacity: 1;
+}
+
+.salir-pantalla--ganar {
+  right: 3.1rem;
 }
 
 /* ── Panels (design, cover, export) ───────────────────────────────────────── */
@@ -1401,8 +1455,37 @@
     border-top: 1px solid var(--linea);
   }
 
+  /*
+   * EN EL MÓVIL MANDA EL TEXTO, NO LA PÁGINA.
+   *
+   * Puesta de lado, la página compuesta se apila debajo del manuscrito y con el
+   * ancho guardado del escritorio —420 px— pedía todo el alto de la pantalla:
+   * medido en un teléfono de 375×812, al manuscrito le quedaban SETENTA Y CINCO
+   * PÍXELES. Tres líneas. En un teléfono no caben las dos cosas y no hay ajuste
+   * que arregle eso, así que se decide aquí: la página es una tira de un tercio
+   * y lo demás es para escribir. Quien quiera ver el libro compuesto en el
+   * móvil tiene «Leer el libro entero», que ocupa la pantalla como debe.
+   *
+   * El tirador no pinta nada en un alto impuesto: se va.
+   */
+  .cuerpo .previa {
+    width: auto !important;
+    height: auto !important;
+    flex: 0 0 auto;
+    max-height: 32vh;
+  }
+
+  .cuerpo .manuscrito {
+    flex: 1 1 auto;
+    min-height: 50vh;
+  }
+
+  .tirador {
+    display: none;
+  }
+
   .manuscrito__caja {
-    padding: 1.5rem 1rem 40vh;
+    padding: 1.5rem 1rem 45vh;
   }
 
   .estanteria__dentro {
@@ -2087,8 +2170,18 @@
  * 3. LA SELECCIÓN, EN SU COLOR. El azul del sistema encima de un papel crema
  *    canta muchísimo; con el acento de la aplicación al 22 % se integra.
  */
+/*
+ * NADA DE DESPLAZAMIENTO SUAVE AQUÍ.
+ *
+ * Con `smooth`, cada vez que el navegador acerca el cursor a la vista mientras
+ * se teclea, el texto entero se desliza — y como se teclea a más velocidad de
+ * lo que dura la animación, el manuscrito parece flotar debajo de los dedos. Es
+ * bonito en una página que se lee y detestable en una que se escribe. Los
+ * saltos deliberados (ir a un capítulo) sí se animan, y se piden uno a uno.
+ */
 .manuscrito {
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
+  overscroll-behavior: contain;
 }
 
 .taller--escritura .manuscrito__caja {

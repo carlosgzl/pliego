@@ -1,38 +1,27 @@
 /**
- * La cuenta como almacén: los mismos libros en los dos ordenadores.
+ * La cuenta como almacén: los mismos libros en todos los navegadores.
  *
- * ESTO ES LO QUE FALTABA. Los libros vivían en el `localStorage` del navegador,
- * así que abrir Pliego en el portátil era encontrarse la estantería vacía. Su
- * pregunta —«¿qué sentido tiene que solo se guarde en un navegador en
- * concreto?»— no tenía respuesta. Ahora la cuenta lleva los libros consigo.
+ * ESTO ES EL PUENTE. El ordenador de casa tiene los .md de verdad pero está
+ * apagado la mitad del día; la nube cifrada necesita la clave de la biblioteca,
+ * que no se teclea en un ordenador de clase. La cuenta no necesita ninguna de
+ * las dos cosas: basta con haber entrado, y entonces la estantería es la misma
+ * en el portátil, en el móvil y en el navegador de al lado.
  *
- * ORDEN DE PREFERENCIA, y el motivo de cada paso:
- *   1. el ordenador de casa, si responde: son los .md de verdad, en Drive;
- *   2. la cuenta, que es el puente entre dispositivos;
- *   3. este navegador, para abrir sin red y no perder nada si se cae.
- *
- * La mezcla es POR LIBRO y por fecha, no por conjunto. Mandar el paquete
- * entero dejaría que un portátil que llevaba una semana apagado borrase lo
- * escrito desde el móvil; comparando libro a libro, cada uno se queda con su
- * versión más nueva y no se pierde ninguno.
+ * Nunca sustituye: manda una biblioteca, el servidor la funde con la que tiene
+ * y devuelve el resultado, que es el que se adopta aquí. Por eso dos
+ * dispositivos escribiendo a la vez convergen en lugar de pisarse — y por eso
+ * `guardarEnCuenta` devuelve datos en vez de un booleano.
  */
 
+import { normalizar, type Biblioteca } from "./fusion";
 import { leerSesion } from "./sesion";
 
 const PUERTA = import.meta.env.DEV ? "https://pliego-cga.netlify.app" : "";
 
-export interface LibroEnCuenta {
-  contenido: string;
-  at: number;
-}
+/** Ni la red ni una función tienen por qué tardar más que esto. */
+const ESPERA = 12_000;
 
-export interface DatosCuenta {
-  libros: Record<string, LibroEnCuenta>;
-  ajustes: unknown | null;
-  at: number;
-}
-
-async function pedir(metodo: "GET" | "PUT", cuerpo?: unknown): Promise<DatosCuenta | null> {
+async function pedir(metodo: "GET" | "PUT", cuerpo?: unknown): Promise<Biblioteca | null> {
   const sesion = leerSesion();
   if (!sesion) {
     return null;
@@ -45,40 +34,33 @@ async function pedir(metodo: "GET" | "PUT", cuerpo?: unknown): Promise<DatosCuen
         ...(cuerpo ? { "content-type": "application/json" } : {}),
       },
       ...(cuerpo ? { body: JSON.stringify(cuerpo) } : {}),
+      signal: AbortSignal.timeout(ESPERA),
     });
     if (!respuesta.ok) {
       return null;
     }
-    return (await respuesta.json()) as DatosCuenta;
+    return normalizar(await respuesta.json());
   } catch {
     return null; // sin red: se sigue con lo local, que para eso está
   }
 }
 
-export function leerDeCuenta(): Promise<DatosCuenta | null> {
+/** Lo que la cuenta tiene ahora, o null si no contestó (que no es «vacía»). */
+export function leerDeCuenta(): Promise<Biblioteca | null> {
   return pedir("GET");
 }
 
-/** Sube la mezcla ya hecha. Devuelve false si no llegó (y no se pierde nada). */
-export async function guardarEnCuenta(datos: {
-  libros: Record<string, LibroEnCuenta>;
-  ajustes?: unknown;
-}): Promise<boolean> {
-  const resultado = await pedir("PUT", { ...datos, at: Date.now() });
-  return resultado !== null;
+/**
+ * Sube una biblioteca y devuelve la fusión que ha quedado en el servidor.
+ *
+ * Devolver la fusión —y no un «ok»— es lo que cierra el círculo: si otro
+ * dispositivo escribió mientras tanto, su capítulo vuelve en esta misma
+ * respuesta y aparece en la estantería sin tener que recargar nada.
+ */
+export function guardarEnCuenta(biblioteca: Biblioteca): Promise<Biblioteca | null> {
+  return pedir("PUT", { ...biblioteca, at: Date.now() });
 }
 
-/** Para cada libro, la copia más reciente de las dos. */
-export function mezclar(
-  mios: Record<string, LibroEnCuenta>,
-  suyos: Record<string, LibroEnCuenta>,
-): Record<string, LibroEnCuenta> {
-  const salida: Record<string, LibroEnCuenta> = { ...suyos };
-  for (const [slug, libro] of Object.entries(mios)) {
-    const otro = salida[slug];
-    if (!otro || libro.at >= otro.at) {
-      salida[slug] = libro;
-    }
-  }
-  return salida;
+export function hayCuenta(): boolean {
+  return leerSesion() !== null;
 }

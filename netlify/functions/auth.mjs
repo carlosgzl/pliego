@@ -202,6 +202,78 @@ function sesionNueva(usuario) {
   return { token: firmar({ u: usuario, sid: randomUUID(), iat: Date.now(), exp }), expira: exp };
 }
 
+/* ── Fundir bibliotecas ───────────────────────────────────────────────────── */
+
+/**
+ * La misma aritmética que `src/datos/fusion.ts`, y por el mismo motivo: nunca
+ * se sustituye una copia por otra, se funde libro a libro y gana el más nuevo.
+ * Un borrado deja una lápida —`borrados[slug] = cuándo`— que mata a las copias
+ * anteriores a ella; sin eso, el primer dispositivo que llevara una semana
+ * apagado resucitaría lo borrado en cuanto volviera.
+ *
+ * ⚠ Si cambia esto, cambia `fusion.ts` en el cliente.
+ */
+const VIDA_LAPIDA = 90 * 24 * 60 * 60 * 1000;
+
+function normalizarBiblioteca(crudo) {
+  const salida = { libros: {}, borrados: {} };
+  if (!crudo || typeof crudo !== "object") {
+    return salida;
+  }
+  if (crudo.libros && typeof crudo.libros === "object") {
+    for (const [slug, libro] of Object.entries(crudo.libros)) {
+      if (libro && typeof libro.contenido === "string") {
+        salida.libros[slug] = {
+          contenido: libro.contenido,
+          at: Number.isFinite(libro.at) ? libro.at : 0,
+        };
+      }
+    }
+  }
+  if (crudo.borrados && typeof crudo.borrados === "object") {
+    for (const [slug, at] of Object.entries(crudo.borrados)) {
+      if (Number.isFinite(at)) {
+        salida.borrados[slug] = at;
+      }
+    }
+  }
+  return salida;
+}
+
+function fundir(unoCrudo, otroCrudo) {
+  const uno = normalizarBiblioteca(unoCrudo);
+  const otro = normalizarBiblioteca(otroCrudo);
+
+  const borrados = { ...uno.borrados };
+  for (const [slug, at] of Object.entries(otro.borrados)) {
+    borrados[slug] = Math.max(borrados[slug] ?? 0, at);
+  }
+
+  const libros = {};
+  for (const slug of new Set([...Object.keys(uno.libros), ...Object.keys(otro.libros)])) {
+    const mio = uno.libros[slug];
+    const suyo = otro.libros[slug];
+    const gana = !suyo || (mio && mio.at >= suyo.at) ? mio : suyo;
+    if (!gana) {
+      continue;
+    }
+    const lapida = borrados[slug];
+    if (lapida !== undefined && lapida >= gana.at) {
+      continue;
+    }
+    libros[slug] = gana;
+  }
+
+  const ahora = Date.now();
+  const vivas = {};
+  for (const [slug, at] of Object.entries(borrados)) {
+    if (ahora - at < VIDA_LAPIDA && !libros[slug]) {
+      vivas[slug] = at;
+    }
+  }
+  return { libros, borrados: vivas };
+}
+
 /* ── Rutas ────────────────────────────────────────────────────────────────── */
 
 export default async function handler(request) {
@@ -273,7 +345,7 @@ export default async function handler(request) {
     const clave = `d/${datos.u}`;
 
     if (request.method === "GET") {
-      return json((await leerBlob(clave)) ?? { libros: {}, ajustes: null, at: 0 });
+      return json((await leerBlob(clave)) ?? { libros: {}, borrados: {}, ajustes: null, at: 0 });
     }
 
     if (request.method === "PUT") {
@@ -281,16 +353,25 @@ export default async function handler(request) {
       if (!cuerpo || typeof cuerpo !== "object") {
         return json({ error: "Contenido no válido." }, 400);
       }
-      /* Gana el más reciente sobre el conjunto. El cliente ya mezcla libro a
-         libro antes de enviar, así que un dispositivo desactualizado no puede
-         borrar lo que otro escribió después. */
+      /*
+       * SE FUNDE AQUÍ, no se sustituye.
+       *
+       * Antes ganaba el paquete entero más reciente, y eso tiene una carrera de
+       * verdad: dos dispositivos leen a la vez, los dos escriben, y el segundo
+       * borra el capítulo del primero porque su paquete es un segundo más
+       * nuevo. Fundiendo libro a libro contra lo que hay en el momento de
+       * escribir, ese caso converge en vez de perder prosa.
+       *
+       * La respuesta es la fusión, así que el cliente se entera al momento de
+       * lo que escribió el otro dispositivo.
+       */
       const actual = await leerBlob(clave);
       const at = typeof cuerpo.at === "number" ? cuerpo.at : Date.now();
-      if (actual && typeof actual.at === "number" && actual.at > at) {
-        return json(actual);
-      }
-      await escribirBlob(clave, { libros: cuerpo.libros ?? {}, ajustes: cuerpo.ajustes ?? null, at });
-      return json({ ok: true, at });
+      const fundido = fundir(actual, cuerpo);
+      const ajustes = cuerpo.ajustes ?? actual?.ajustes ?? null;
+      const salida = { ...fundido, ajustes, at: Math.max(at, actual?.at ?? 0) };
+      await escribirBlob(clave, salida);
+      return json(salida);
     }
   }
 
