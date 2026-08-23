@@ -9,10 +9,17 @@
  *
  * Se comprueban las mismas propiedades que en `fusion.test.ts`, sobre la
  * implementación de este lado.
+ *
+ * ⚠ VIVE FUERA DE `netlify/functions/`, Y NO ES CAPRICHO. Netlify empaqueta
+ * como función CADA archivo suelto de esa carpeta, así que un `auth.test.mjs`
+ * ahí dentro se convertía en una función que importa `vitest` —que no está en
+ * las dependencias de producción— y el DESPLIEGUE ENTERO FALLABA. En silencio,
+ * desde fuera: el sitio seguía sirviendo la versión anterior tan tranquilo, y
+ * costó tres commits darse cuenta de que no llegaba ninguno.
  */
 
 import { describe, expect, it } from "vitest";
-import { fundir } from "./auth.mjs";
+import { fundir } from "../netlify/functions/auth.mjs";
 
 const libro = (contenido, at) => ({ contenido, at });
 
