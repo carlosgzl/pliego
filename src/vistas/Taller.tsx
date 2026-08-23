@@ -27,6 +27,7 @@
 
 import {
   useCallback,
+  useDeferredValue,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -54,9 +55,25 @@ import {
 import { pilaDe } from "@/nucleo/fuentes";
 import { medidaMm } from "@/nucleo/geometria";
 import { componer, descomponer, type Meta } from "@/nucleo/libro";
-import { guardarLibro, leerLibro, type ResultadoGuardado } from "@/datos/biblioteca";
+import {
+  alCambiarBiblioteca,
+  guardarLibro,
+  leerLibro,
+  leerLibroDeCache,
+  type ResultadoGuardado,
+} from "@/datos/biblioteca";
 import { ficheroDeMuestra } from "@/datos/muestra";
 import { marcarArranque, palabrasDeHoy, type Ajustes, type SitioPrevia } from "@/datos/ajustes";
+import { guardarBorrador, leerBorrador, olvidarBorrador } from "@/datos/borrador";
+import { aplicarConDeshacer, altoDelCursor } from "@/ui/area";
+import { useReposo } from "@/ui/useReposo";
+import {
+  alCambiarPantalla,
+  enPantallaCompleta,
+  pedirPantallaCompleta,
+  salirDePantallaCompleta,
+  sePuedePantallaCompleta,
+} from "@/ui/pantalla";
 import { avisar } from "@/ui/Avisos";
 import { sonarTecla } from "@/ui/sonido";
 import { Icono } from "@/ui/Icono";
@@ -106,6 +123,7 @@ export function Taller({
    */
   const escribiendoSolo = ajustes.escritura;
   const [barraAsomada, setBarraAsomada] = useState(false);
+  const [aPantalla, setAPantalla] = useState(enPantallaCompleta);
 
   const area = useRef<HTMLTextAreaElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -113,6 +131,12 @@ export function Taller({
   const ultimoGuardado = useRef("");
   /** Cuándo se abrió este libro: es el cronómetro de la sesión. */
   const desde = useRef(Date.now());
+  /** Estamos dentro de una edición nuestra: no reentrar en la tipografía. */
+  const aplicando = useRef(false);
+  /** El texto del fotograma anterior, para saber si esto ha sido teclear. */
+  const cuerpoPrevio = useRef("");
+  /** El reloj del borrador, que escribe como mucho una vez cada tanto. */
+  const relojBorrador = useRef<number | null>(null);
 
   /* ── Abrir ───────────────────────────────────────────────────────────────── */
 
@@ -130,11 +154,25 @@ export function Taller({
         onSalir();
         return;
       }
-      const partido = descomponer(fichero);
+      /*
+       * El cinturón de seguridad, si se usó.
+       *
+       * Un borrador solo existe cuando la pestaña se cerró (o el móvil mató la
+       * aplicación) antes de que el guardado confirmara. Si lo hay y no coincide
+       * con lo que se acaba de abrir, gana el borrador: es literalmente lo
+       * último que escribió esta persona, y perderlo por no preguntar sería
+       * exactamente el fallo que el borrador viene a evitar.
+       */
+      const borrador = demo ? null : leerBorrador(slug);
+      const recuperado = borrador && borrador.fichero !== fichero ? borrador.fichero : null;
+      const partido = descomponer(recuperado ?? fichero);
       setMeta(partido.meta);
       setCuerpo(partido.cuerpo);
       ultimoGuardado.current = fichero;
-      setEstado("limpio");
+      setEstado(recuperado ? "escribiendo" : "limpio");
+      if (recuperado) {
+        avisar("Recuperado lo último que escribiste: no había llegado a guardarse.");
+      }
       marcarArranque(slug, contarPalabras(partido.cuerpo));
     })();
     return () => {
@@ -144,9 +182,38 @@ export function Taller({
 
   /* ── Derivados ───────────────────────────────────────────────────────────── */
 
-  const bloques = useMemo(() => partirEnBloques(cuerpo), [cuerpo]);
+  /*
+   * TODO LO CARO VA CON EL TEXTO DIFERIDO, Y ESTO ES LO QUE QUITA EL TIRÓN.
+   *
+   * En cada tecla se estaba volviendo a partir la novela en bloques, a contar
+   * sus palabras y sus caracteres, a recalcular los capítulos y a recomponer la
+   * página de al lado. Con un libro de verdad eso son varios milisegundos por
+   * pulsación y se nota en los dedos: escribes rápido y la letra llega tarde.
+   *
+   * `useDeferredValue` deja que la tecla se pinte primero, y `useReposo` espera
+   * además a que se levante la vista del teclado — porque «cuando React tenga
+   * un hueco» incluye el hueco que hay entre dos teclas, y ahí se colaba una
+   * recomposición de la novela entera cada pocas pulsaciones. La página
+   * compuesta y los gadgets van una fracción de segundo por detrás, que es
+   * exactamente donde deben ir: son cosas que se miran de reojo, no mientras se
+   * teclea.
+   *
+   * El espejo del manuscrito NO va aquí: ese tiene que ser exacto o el cursor
+   * se despega de las letras. De su coste se encarga él, línea a línea.
+   */
+  /* La espera crece con el libro: en un cuento de dos mil palabras las cuentas
+     pueden ir casi pegadas a la tecla, y en una novela de ciento cuarenta mil
+     letras recomponer la página cuesta un cuarto de segundo y hay que hacerlo
+     cuando de verdad se ha parado. El techo evita que se queden congeladas. */
+  const largo = cuerpo.length > 60_000;
+  const cuerpoTranquilo = useReposo(
+    useDeferredValue(cuerpo),
+    largo ? 600 : 220,
+    largo ? 4000 : 1500,
+  );
+  const bloques = useMemo(() => partirEnBloques(cuerpoTranquilo), [cuerpoTranquilo]);
   const capitulos = useMemo(() => capitulosDe(bloques), [bloques]);
-  const palabras = useMemo(() => contarPalabras(cuerpo), [cuerpo]);
+  const palabras = useMemo(() => contarPalabras(cuerpoTranquilo), [cuerpoTranquilo]);
   const hoy = palabrasDeHoy(slug, palabras);
 
   const indiceCapitulo = useMemo(() => {
@@ -189,6 +256,10 @@ export function Taller({
         return;
       }
       ultimoGuardado.current = fichero;
+      /* Confirmado en algún sitio duradero: el cinturón ya no hace falta, y
+         dejarlo puesto haría que la próxima apertura creyera que se perdió
+         algo. */
+      olvidarBorrador(slug);
       setProblema(resultado.problema ?? null);
       setEstado(resultado.problema ? "problema" : "guardado");
     },
@@ -216,8 +287,82 @@ export function Taller({
     if (meta) {
       void guardar(meta, cuerpo);
     }
+    void salirDePantallaCompleta();
     onSalir();
   }, [meta, cuerpo, guardar, onSalir]);
+
+  /* ── Modo escritura, ahora con pantalla completa de verdad ───────────────── */
+
+  /**
+   * Entrar y salir del modo escritura.
+   *
+   * Lo que faltaba: además de esconder la aplicación, esconder el navegador.
+   * Su encargo era literal —«solo saldrá la web, nada del navegador»— y el modo
+   * anterior dejaba arriba la barra de direcciones, las pestañas y los
+   * marcadores, que es la mitad del ruido.
+   *
+   * Pedir pantalla completa SOLO se puede dentro de un gesto de la persona, así
+   * que esto se llama desde el botón y desde la tecla, nunca desde un efecto. Si
+   * el navegador dice que no —iOS, una política de la máquina de clase— el modo
+   * escritura entra igual: se pierde el marco escondido, no el modo.
+   */
+  const ponerEscritura = useCallback(
+    (quiero: boolean) => {
+      onAjustes({ ...ajustes, escritura: quiero });
+      if (quiero) {
+        if (ajustes.pantallaCompleta) {
+          void pedirPantallaCompleta();
+        }
+      } else {
+        void salirDePantallaCompleta();
+      }
+    },
+    [ajustes, onAjustes],
+  );
+
+  /*
+   * Que salirse de pantalla completa por su cuenta —Esc, F11, el botón del
+   * navegador— apague también el modo escritura. Si no, se queda uno con la
+   * aplicación escondida y el marco del navegador de vuelta, sin entender qué
+   * ha pasado ni cómo se deshace.
+   */
+  useEffect(
+    () =>
+      alCambiarPantalla(() => {
+        const ahora = enPantallaCompleta();
+        setAPantalla(ahora);
+        if (!ahora && ajustes.escritura && ajustes.pantallaCompleta) {
+          onAjustes({ ...ajustes, escritura: false });
+        }
+      }),
+    [ajustes, onAjustes],
+  );
+
+  /*
+   * Al abrir un libro con el modo escritura ya guardado, se intenta la pantalla
+   * completa una vez. Normalmente funciona: el clic que abrió el libro sigue
+   * contando como gesto durante unos segundos. Si no cuela, no pasa nada — el
+   * botón de expandir sigue ahí.
+   */
+  useEffect(() => {
+    if (ajustes.escritura && ajustes.pantallaCompleta && !enPantallaCompleta()) {
+      void pedirPantallaCompleta().then(setAPantalla);
+    }
+    // Solo al abrir: si se repitiera, cada cambio de ajuste pediría pantalla.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* F11 en cualquier parte del taller: entrar y salir del modo escritura. */
+  useEffect(() => {
+    const alPulsar = (evento: KeyboardEvent) => {
+      if (evento.key === "F11" && !evento.ctrlKey && !evento.altKey) {
+        evento.preventDefault();
+        ponerEscritura(!ajustes.escritura);
+      }
+    };
+    window.addEventListener("keydown", alPulsar);
+    return () => window.removeEventListener("keydown", alPulsar);
+  }, [ajustes.escritura, ponerEscritura]);
 
   useEffect(() => {
     if (!ajustes.avisarSalida) {
@@ -232,17 +377,105 @@ export function Taller({
     return () => window.removeEventListener("beforeunload", alSalir);
   }, [estado, demo, ajustes.avisarSalida]);
 
+  /*
+   * Guardar al esconder la pestaña, sin esperar al temporizador.
+   *
+   * En el móvil esto no es un detalle: cambiar de aplicación puede matar la
+   * pestaña, y `beforeunload` allí no se dispara. `visibilitychange` es el
+   * único aviso fiable que da un teléfono, así que es donde hay que soltar el
+   * texto —al borrador de inmediato, que es síncrono, y al guardado de verdad,
+   * que puede que llegue.
+   */
+  useEffect(() => {
+    if (demo) {
+      return;
+    }
+    const alEsconder = () => {
+      if (document.visibilityState !== "hidden" || !meta) {
+        return;
+      }
+      guardarBorrador(slug, componer(meta, cuerpo));
+      void guardar(meta, cuerpo);
+    };
+    document.addEventListener("visibilitychange", alEsconder);
+    window.addEventListener("pagehide", alEsconder);
+    return () => {
+      document.removeEventListener("visibilitychange", alEsconder);
+      window.removeEventListener("pagehide", alEsconder);
+    };
+  }, [meta, cuerpo, slug, demo, guardar]);
+
+  /*
+   * Lo que otro dispositivo haya escrito en este mismo libro.
+   *
+   * La sincronización de fondo (`datos/latido.ts`) funde y avisa; aquí se
+   * recoge SOLO si no hay nada sin guardar en pantalla. Con el manuscrito
+   * tocado no se toca una letra: se avisa y se deja decidir. Machacar el
+   * párrafo que alguien está escribiendo porque llegó una versión de hace un
+   * minuto sería exactamente la clase de cosa que hace desconfiar de un
+   * programa de escribir.
+   */
+  useEffect(() => {
+    if (demo) {
+      return;
+    }
+    return alCambiarBiblioteca(() => {
+      const fuera = leerLibroDeCache(slug);
+      if (!fuera || fuera.contenido === ultimoGuardado.current) {
+        return;
+      }
+      const limpio = estado === "limpio" || estado === "guardado";
+      if (!limpio) {
+        avisar("Hay una versión más nueva de este libro en otro dispositivo.", "error");
+        return;
+      }
+      const partido = descomponer(fuera.contenido);
+      setMeta(partido.meta);
+      setCuerpo(partido.cuerpo);
+      ultimoGuardado.current = fuera.contenido;
+      setEstado("limpio");
+      avisar("Actualizado con lo escrito en otro dispositivo.");
+    });
+  }, [slug, demo, estado]);
+
   /* ── Editar ──────────────────────────────────────────────────────────────── */
 
+  /**
+   * Aplicar una edición de la aplicación al manuscrito.
+   *
+   * SIEMPRE se intenta primero por la vía del navegador (`aplicarConDeshacer`),
+   * porque es la única que conserva Ctrl+Z. Poner el texto por estado de React
+   * es sustituir el contenido entero, y ante eso el navegador tira su pila de
+   * deshacer: bastaba con que la tipografía automática convirtiera unos puntos
+   * suspensivos para que se perdiera todo lo deshacible del último rato. Ver
+   * `ui/area.ts`.
+   *
+   * El camino por estado sigue estando de reserva, para el navegador que un día
+   * retire `execCommand`. Entonces se pierde el deshacer de ese paso; nunca el
+   * texto.
+   */
   const aplicar = useCallback((edicion: Edicion) => {
+    const nodo = area.current;
+    /* La inserción dispara un `input`, que vuelve a entrar por `alEscribir`.
+       Esta marca es la que impide que la tipografía automática se dispare
+       encima de una edición que ya es nuestra. */
+    aplicando.current = true;
+    const hecho = nodo ? aplicarConDeshacer(nodo, edicion) : false;
+    aplicando.current = false;
+    if (hecho) {
+      // El evento `input` que dispara la inserción ya ha pasado por `alEscribir`
+      // con el texto puesto; aquí solo queda dejar el cursor donde toca.
+      setCursor(edicion.desde);
+      return;
+    }
     setCuerpo(edicion.texto);
     setEstado("escribiendo");
     setCursor(edicion.desde);
     requestAnimationFrame(() => {
-      const nodo = area.current;
-      if (nodo) {
-        nodo.focus();
-        nodo.setSelectionRange(edicion.desde, edicion.hasta);
+      const suelto = area.current;
+      if (suelto) {
+        suelto.focus();
+        suelto.setSelectionRange(edicion.desde, edicion.hasta);
       }
     });
   }, []);
@@ -327,46 +560,138 @@ export function Taller({
     }
 
     if (evento.key === "Escape" && escribiendoSolo) {
-      onAjustes({ ...ajustes, escritura: false });
+      ponerEscritura(false);
     }
   };
 
-  const alEscribir = (valor: string, posicion: number) => {
+  /**
+   * Ha cambiado el texto.
+   *
+   * `tipo` es el `inputType` del evento, y decide si toca mirar la tipografía.
+   * Solo se mira cuando se acaba de TECLEAR: si se mirara siempre, deshacer
+   * unos puntos suspensivos los volvería a convertir en el acto —Ctrl+Z y el
+   * texto vuelve solo, que es de las cosas que peor sientan— y pegar un texto
+   * de fuera lo reescribiría sin que nadie lo haya pedido.
+   */
+  const alEscribir = (valor: string, posicion: number, tipo?: string) => {
     setEstado("escribiendo");
-    if (ajustes.tipografia) {
+    setCuerpo(valor);
+    setCursor(posicion);
+    const tecleado = tipo === undefined || tipo === "insertText";
+    if (ajustes.tipografia && tecleado && !aplicando.current) {
       const arreglo = tipografia(valor, posicion);
       if (arreglo) {
         aplicar(arreglo);
-        return;
       }
     }
-    setCuerpo(valor);
-    setCursor(posicion);
   };
 
+  /*
+   * El alto del campo, SOLO para el manuscrito que ya no tiene espejo.
+   *
+   * Con espejo no hay nada que hacer: va en el flujo y él da la altura a la
+   * pila (ver `app.css`). Sin él hay que medir a mano —`height:auto`, leer
+   * `scrollHeight`, devolver la altura—, que son dos recálculos de diseño
+   * forzados por pulsación. Es caro, y por eso solo pasa arriba de doscientas
+   * mil letras; medido, sigue siendo más barato que montar un segundo bloque
+   * de ese tamaño solo para medirlo.
+   */
   useLayoutEffect(() => {
     const nodo = area.current;
-    if (!nodo) {
+    if (!nodo || cuerpo.length <= TOPE_RESALTADO) {
       return;
     }
     nodo.style.height = "auto";
     nodo.style.height = `${nodo.scrollHeight}px`;
   }, [cuerpo, ajustes.tamanoEditor, ajustes.anchoEditor, ajustes.interlineadoEditor]);
 
-  useEffect(() => {
-    if (!ajustes.maquina) {
-      return;
-    }
+  /*
+   * QUE LA LÍNEA QUE ESCRIBES ESTÉ SIEMPRE DONDE SE LEE.
+   *
+   * Dos comportamientos con la misma medida, que es la posición real del cursor
+   * en píxeles (`altoDelCursor`). La cuenta de antes contaba saltos de línea, o
+   * sea párrafos: con una medida de sesenta y ocho caracteres un párrafo son
+   * ocho o diez líneas en pantalla, así que el «centro» se equivocaba por media
+   * pantalla y el texto pegaba tirones.
+   *
+   *   · con «escribir en el centro», el cursor se queda clavado a media altura,
+   *     como el rodillo de una máquina de escribir;
+   *   · sin él basta con que no se acerque a los bordes: se corrige solo cuando
+   *     cae en el quinto de arriba o en el cuarto de abajo, y entonces se
+   *     recoloca sin animación. El desplazamiento suave, aquí, era justo lo que
+   *     hacía que el texto pareciese flotar mientras se teclea.
+   *
+   * Solo se mueve la vista cuando ha cambiado el TEXTO. Si se moviera también
+   * al mover el cursor, hacer clic cerca de un borde daría un salto que nadie
+   * ha pedido.
+   */
+  useLayoutEffect(() => {
     const nodo = area.current;
     const caja = scroller.current;
-    if (!nodo || !caja) {
+    const tecleado = cuerpo !== cuerpoPrevio.current;
+    cuerpoPrevio.current = cuerpo;
+    if (!nodo || !caja || document.activeElement !== nodo) {
       return;
     }
-    const lineas = cuerpo.slice(0, cursor).split("\n").length;
-    const alturaLinea = ajustes.tamanoEditor * ajustes.interlineadoEditor;
-    const objetivo = nodo.offsetTop + lineas * alturaLinea - caja.clientHeight / 2;
-    caja.scrollTo({ top: Math.max(0, objetivo), behavior: "smooth" });
-  }, [cursor, ajustes.maquina, ajustes.tamanoEditor, ajustes.interlineadoEditor, cuerpo]);
+    if (!ajustes.maquina && !tecleado) {
+      return;
+    }
+
+    const colocar = () => {
+      const { arriba, alto } = altoDelCursor(nodo);
+      const donde = nodo.getBoundingClientRect().top - caja.getBoundingClientRect().top + arriba;
+      const ventana = caja.clientHeight;
+
+      let mover = 0;
+      if (ajustes.maquina) {
+        mover = donde - (ventana - alto) / 2;
+      } else {
+        const techo = ventana * 0.2;
+        const suelo = ventana * 0.75;
+        if (donde + alto > suelo) {
+          mover = donde + alto - suelo;
+        } else if (donde < techo) {
+          mover = donde - techo;
+        }
+      }
+      if (Math.abs(mover) > 1) {
+        caja.scrollTop = Math.max(0, caja.scrollTop + mover);
+      }
+    };
+
+    /*
+     * Se coloca DOS VECES, y la segunda es la que cuenta.
+     *
+     * El navegador tiene su propia idea de dónde debe quedar el cursor: lo
+     * arrastra al borde de abajo, lo justo para que se vea, y lo hace DESPUÉS
+     * de este efecto. Colocando solo aquí, lo nuestro se perdía y la línea que
+     * se escribe seguía pegada al canto inferior de la pantalla, que era
+     * exactamente la incomodidad que esto viene a quitar.
+     *
+     * La primera pasada evita el parpadeo en los casos en que el navegador no
+     * toca nada; la del fotograma siguiente corrige cuando sí lo ha tocado.
+     */
+    colocar();
+    const cuadro = requestAnimationFrame(colocar);
+    return () => cancelAnimationFrame(cuadro);
+  }, [cursor, cuerpo, ajustes.maquina, ajustes.tamanoEditor, ajustes.interlineadoEditor]);
+
+  /*
+   * El cinturón de seguridad: el archivo entero en este navegador, sin red.
+   *
+   * Como mucho una vez cada 700 ms —escribir no puede pagar un `JSON.stringify`
+   * de la novela por letra— y siempre al esconder la pestaña, que es cuando el
+   * móvil se lleva la aplicación por delante sin avisar. Ver `datos/borrador.ts`.
+   */
+  useEffect(() => {
+    if (demo || !meta || estado === "abriendo" || relojBorrador.current !== null) {
+      return;
+    }
+    relojBorrador.current = window.setTimeout(() => {
+      relojBorrador.current = null;
+      guardarBorrador(slug, componer(meta, cuerpo));
+    }, 700);
+  }, [cuerpo, meta, slug, demo, estado]);
 
   /* ── Mover el tirador de la previa ───────────────────────────────────────── */
 
@@ -516,10 +841,10 @@ export function Taller({
       clave: "escritura",
       nombre: "Modo escritura",
       icono: "expandir",
-      atajo: "Esc para salir",
+      atajo: "F11 · Esc para salir",
       ayuda:
-        "Se va todo: la barra, la página compuesta, los gadgets y el índice. Queda tu texto y nada más. La barra vuelve sola si acercas el ratón al borde de arriba.",
-      hacer: () => onAjustes({ ...ajustes, escritura: true }),
+        "Se va todo: la barra, la página compuesta, los gadgets, el índice — y el propio navegador, que pasa a pantalla completa. Queda tu texto y nada más. La barra vuelve sola si acercas el ratón al borde de arriba, y Esc lo deshace.",
+      hacer: () => ponerEscritura(true),
     },
   ];
 
@@ -594,10 +919,14 @@ export function Taller({
             {/* Suelto y no dentro del menú: es el botón que más se pulsa de
                 todos, y esconderlo detrás de «Ver» sería enterrarlo. */}
             <BotonBarra
-              nombre="Modo escritura"
+              nombre={
+                ajustes.pantallaCompleta
+                  ? "Modo escritura a pantalla completa (F11)"
+                  : "Modo escritura (F11)"
+              }
               icono="expandir"
               soloIcono
-              onClick={() => onAjustes({ ...ajustes, escritura: true })}
+              onClick={() => ponerEscritura(true)}
             />
           </GrupoBarra>
         </div>
@@ -619,7 +948,7 @@ export function Taller({
         {previaVisible && ajustes.previa === "izquierda" && (
           <Previa
             meta={meta}
-            cuerpo={cuerpo}
+            cuerpo={cuerpoTranquilo}
             ajustes={ajustes}
             pagina={pagina}
             paginas={paginas}
@@ -638,7 +967,11 @@ export function Taller({
           onClick={() => area.current?.focus()}
         >
           <div className="manuscrito__caja" style={{ maxWidth: `${ajustes.anchoEditor}ch` }}>
-            <div className="manuscrito__pila">
+            {/* Con espejo, el espejo va en el flujo y es él quien da el alto a
+                la pila; el campo se estira encima y no hace falta medir nada.
+                Sin espejo la pila es normal y el alto lo pone el efecto de
+                arriba, que es el camino caro y por eso el excepcional. */}
+            <div className={`manuscrito__pila${resaltado ? " manuscrito__pila--espejo" : ""}`}>
               {resaltado && (
                 <Resaltado valor={cuerpo} cursor={cursor} foco={ajustes.foco} estilo={tipoEditor} />
               )}
@@ -650,7 +983,13 @@ export function Taller({
                 lang="es"
                 placeholder="Empieza por la primera frase. Lo demás viene detrás."
                 style={tipoEditor}
-                onChange={(evento) => alEscribir(evento.target.value, evento.target.selectionStart)}
+                onChange={(evento) =>
+                  alEscribir(
+                    evento.target.value,
+                    evento.target.selectionStart,
+                    (evento.nativeEvent as InputEvent).inputType,
+                  )
+                }
                 onKeyDown={alTeclear}
                 onSelect={(evento) => setCursor(evento.currentTarget.selectionStart)}
                 onClick={(evento) => setCursor(evento.currentTarget.selectionStart)}
@@ -662,7 +1001,7 @@ export function Taller({
         {previaVisible && ajustes.previa !== "izquierda" && (
           <Previa
             meta={meta}
-            cuerpo={cuerpo}
+            cuerpo={cuerpoTranquilo}
             ajustes={ajustes}
             pagina={pagina}
             paginas={paginas}
@@ -715,10 +1054,27 @@ export function Taller({
               aria-hidden="true"
             />
           )}
+          {/*
+            * Si la pantalla completa no llegó a concederse —al abrir un libro
+            * con el modo ya guardado, o en un navegador que la niega— se ofrece
+            * aquí, que es donde se está mirando. Sin esto el ajuste diría una
+            * cosa y la pantalla otra.
+            */}
+          {!aPantalla && ajustes.pantallaCompleta && sePuedePantallaCompleta() && (
+            <button
+              type="button"
+              className="boton boton--desnudo salir-pantalla salir-pantalla--ganar"
+              onClick={() => void pedirPantallaCompleta().then(setAPantalla)}
+              title="Pantalla completa (F11)"
+              aria-label="Pantalla completa"
+            >
+              <Icono nombre="expandir" />
+            </button>
+          )}
           <button
             type="button"
             className="boton boton--desnudo salir-pantalla"
-            onClick={() => onAjustes({ ...ajustes, escritura: false })}
+            onClick={() => ponerEscritura(false)}
             title="Salir del modo escritura (Esc)"
             aria-label="Salir del modo escritura"
           >

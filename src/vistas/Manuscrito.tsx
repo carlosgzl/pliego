@@ -1,65 +1,167 @@
 /**
- * The manuscript: a textarea you cannot tell is a textarea.
+ * El manuscrito: un textarea que no parece un textarea.
  *
- * THE PROBLEM. The file is Markdown and must stay Markdown, but a writer
- * staring at `# Capítulo primero` and `la **tormenta**` is reading the file
- * format instead of their book. Buttons that insert the marks for you are only
- * half the fix: the marks are still the loudest thing on the page.
+ * EL PROBLEMA. El archivo es Markdown y tiene que seguir siéndolo, pero quien
+ * escribe y ve `# Capítulo primero` y `la **tormenta**` está leyendo el formato
+ * del archivo en lugar de su libro. Los botones que ponen las marcas por ti son
+ * solo media solución: las marcas siguen siendo lo que más grita en la página.
  *
- * THE FIX, and why it is done this way. Behind a transparent textarea sits a
- * mirror of the same text, laid out with exactly the same metrics, where the
- * syntax characters are painted at 15% opacity and the words at full ink. You
- * see prose; the marks are still there, still selectable, still deletable with
- * one backspace, but they have stopped shouting.
+ * LA SOLUCIÓN, y por qué es esta. Detrás de un textarea transparente hay un
+ * espejo del mismo texto, compuesto con exactamente las mismas métricas, donde
+ * los caracteres de sintaxis se pintan al 18 % y las palabras a tinta entera.
+ * Ves prosa; las marcas siguen ahí, se siguen seleccionando y se siguen
+ * borrando de un retroceso, pero han dejado de dar voces.
  *
- * THE ONE RULE THIS DEPENDS ON: the mirror and the textarea must wrap
- * identically, or the caret drifts away from the letters. That is why the
- * highlighting only ever changes COLOUR — never size, never weight, never
- * letter-spacing. A bold run that actually rendered bold would be wider than
- * the text under it and every line after it would be wrong. Bold and italic
- * belong in the composed page beside you, which is where a writer looks for
- * them anyway.
+ * LA REGLA DE LA QUE DEPENDE TODO: el espejo y el textarea tienen que cortar
+ * las líneas EN EL MISMO SITIO, o el cursor se despega de las letras. Por eso
+ * el resaltado solo cambia el COLOR — nunca el tamaño, nunca el grosor, nunca
+ * el espaciado. Una negrita que se pintara de verdad sería más ancha que el
+ * texto de debajo y todas las líneas siguientes irían mal. La negrita y la
+ * cursiva viven en la página compuesta de al lado, que es donde un escritor las
+ * busca de todas formas.
  *
- * Focus mode rides on the same mirror: the paragraph holding the caret keeps
- * full ink and everything else drops back, which a plain textarea simply
- * cannot do.
+ * POR QUÉ VA PARTIDO EN LÍNEAS MEMORIZADAS. Antes el espejo entero se volvía a
+ * construir en cada tecla: en una novela son decenas de miles de <span> que
+ * React tiene que comparar sesenta veces por segundo mientras alguien escribe,
+ * y se notaba en los dedos. Una línea es una unidad natural aquí —el corte de
+ * párrafo, el título, la escena— así que cada una es su propio componente
+ * memorizado y una tecla solo repinta la línea en la que está el cursor.
+ *
+ * El modo foco va montado en el mismo espejo: el párrafo donde está el cursor
+ * se queda a tinta entera y todo lo demás retrocede, que es algo que un
+ * textarea a secas no puede hacer.
  */
 
-import { useMemo, type CSSProperties, type ReactNode } from "react";
+import { memo, useMemo, type CSSProperties, type ReactNode } from "react";
 
 /**
- * Past this many characters the mirror is dropped and the textarea shows its
- * own text. Re-painting a novel's worth of spans on every keystroke would cost
- * more than the marks do — and at that length the writer has long since stopped
- * noticing them.
+ * Pasado este número de caracteres se retira el espejo y el textarea enseña su
+ * propio texto. Repintar una novela entera de <span> en cada tecla costaría más
+ * de lo que cuestan las marcas — y a esa longitud quien escribe hace mucho que
+ * dejó de verlas.
  */
 export const TOPE_RESALTADO = 200_000;
 
 export interface ManuscritoProps {
   valor: string;
-  /** Caret position, for focus mode. */
+  /** Dónde está el cursor, para el modo foco. */
   cursor: number;
   foco: boolean;
   estilo: CSSProperties;
 }
 
 export function Resaltado({ valor, cursor, foco, estilo }: ManuscritoProps) {
-  const partes = useMemo(() => pintar(valor, cursor, foco), [valor, cursor, foco]);
+  const lineas = useMemo(() => valor.split("\n"), [valor]);
+
+  /* Qué líneas quedan encendidas: las del párrafo del cursor. Se calcula con
+     los desplazamientos de cada línea, no con una búsqueda por línea, para que
+     mover el cursor no cueste más que escribir. */
+  const encendidas = useMemo(() => {
+    if (!foco) {
+      return null;
+    }
+    const [desde, hasta] = parrafoDe(valor, cursor);
+    const dentro: boolean[] = [];
+    let posicion = 0;
+    for (const linea of lineas) {
+      const fin = posicion + linea.length;
+      dentro.push(fin > desde && posicion < hasta);
+      posicion = fin + 1; // el "\n"
+    }
+    return dentro;
+  }, [foco, valor, cursor, lineas]);
+
+  /*
+   * Pasado el tope se retira el espejo entero, y el campo enseña su texto.
+   *
+   * Se probó a dejar aquí un «espejo mudo» —sin <span> y en tinta invisible—
+   * para que siguiera dando la altura y no hubiera que medir el campo desde
+   * JavaScript. MEDIDO EN COMPILACIÓN DE PRODUCCIÓN, sobre 210 000 caracteres:
+   * 116 ms por tecla con espejo mudo contra 93 ms midiendo a mano. Componer un
+   * segundo bloque de doscientas mil letras cuesta más que los dos recálculos
+   * del campo. Así que a partir de aquí manda el efecto de altura del Taller.
+   */
   if (valor.length > TOPE_RESALTADO) {
     return null;
   }
+
   return (
     <pre className="manuscrito__espejo" style={estilo} aria-hidden="true">
-      {partes}
-      {/* A <pre> swallows a single trailing newline; without this the mirror is
-          one line shorter than the textarea the moment you press Enter at the
-          end, and everything below the caret slides up by a line. */}
+      {lineas.map((linea, indice) => (
+        <Linea
+          // eslint-disable-next-line react/no-array-index-key
+          key={indice}
+          texto={linea}
+          apagada={encendidas ? !encendidas[indice] : false}
+          salto={indice < lineas.length - 1}
+        />
+      ))}
+      {/* Un <pre> se traga un salto de línea final; sin esto el espejo mide una
+          línea menos en cuanto pulsas Enter al final y todo lo que hay bajo el
+          cursor sube de golpe. */}
       {"\n"}
     </pre>
   );
 }
 
-/** Where the paragraph under the caret starts and ends. */
+/**
+ * Una línea del espejo.
+ *
+ * Memorizada: sus tres propiedades son primitivas, así que React se salta la
+ * línea que no ha cambiado, que en una novela son todas menos una.
+ */
+const Linea = memo(function Linea({
+  texto,
+  apagada,
+  salto,
+}: {
+  texto: string;
+  apagada: boolean;
+  salto: boolean;
+}) {
+  const partes: ReactNode[] = [];
+  let clave = 0;
+
+  const empujar = (contenido: string, tipo: "texto" | "marca") => {
+    if (contenido.length === 0) {
+      return;
+    }
+    /* "sintaxis", no "marca": la estantería ya usa `.marca` para su rótulo y es
+       un contenedor flex, así que reutilizar el nombre convertía cada `# ` en
+       un bloque y echaba el título del capítulo a una línea aparte. */
+    const clases = [tipo === "marca" ? "sintaxis" : null, apagada ? "apagado" : null]
+      .filter(Boolean)
+      .join(" ");
+    partes.push(
+      clases ? (
+        <span key={clave++} className={clases}>
+          {contenido}
+        </span>
+      ) : (
+        <span key={clave++}>{contenido}</span>
+      ),
+    );
+  };
+
+  const titulo = /^(#{1,6}\s)(.*)$/.exec(texto);
+  if (titulo) {
+    empujar(titulo[1]!, "marca");
+    pintarLinea(titulo[2]!, empujar);
+  } else if (/^\s*(\*\s*\*\s*\*|---+|~~~+)\s*$/.test(texto)) {
+    empujar(texto, "marca");
+  } else {
+    pintarLinea(texto, empujar);
+  }
+
+  return (
+    <>
+      {partes}
+      {salto ? "\n" : null}
+    </>
+  );
+});
+
+/** Dónde empieza y dónde acaba el párrafo en el que está el cursor. */
 function parrafoDe(texto: string, cursor: number): [number, number] {
   const limite = Math.max(0, Math.min(cursor, texto.length));
   const antes = texto.lastIndexOf("\n\n", Math.max(0, limite - 1));
@@ -68,63 +170,15 @@ function parrafoDe(texto: string, cursor: number): [number, number] {
 }
 
 /**
- * The text, split into runs of "words" and "syntax".
+ * Los asteriscos de énfasis dentro de una línea.
  *
- * Kept deliberately simple: heading hashes at the start of a line, the emphasis
- * stars, and the scene-break line. Those are the only marks this app writes, so
- * they are the only ones worth dimming — and a highlighter that tried to be a
- * full Markdown parser would eventually disagree with the composer about what
- * something means, which is worse than not highlighting at all.
+ * Deliberadamente simple: las almohadillas de título al principio de línea, los
+ * asteriscos, y la línea de corte de escena. Son las únicas marcas que escribe
+ * esta aplicación, así que son las únicas que merece la pena apagar — y un
+ * resaltador que quisiera ser un intérprete de Markdown completo acabaría no
+ * estando de acuerdo con el compositor sobre qué significa algo, que es peor
+ * que no resaltar nada.
  */
-function pintar(texto: string, cursor: number, foco: boolean): ReactNode[] {
-  const [desdeFoco, hastaFoco] = foco ? parrafoDe(texto, cursor) : [0, texto.length];
-  const salida: ReactNode[] = [];
-  let posicion = 0;
-  let clave = 0;
-
-  const empujar = (contenido: string, tipo: "texto" | "marca") => {
-    if (contenido.length === 0) {
-      return;
-    }
-    const inicio = posicion;
-    posicion += contenido.length;
-    const apagado = foco && (posicion <= desdeFoco || inicio >= hastaFoco);
-    /* "sintaxis", not "marca": the shelf's wordmark already owns `.marca` and
-       it is a flex container, so reusing the name turned every `# ` into a
-       block and pushed the chapter title onto a line of its own. */
-    const clases = [tipo === "marca" ? "sintaxis" : null, apagado ? "apagado" : null]
-      .filter(Boolean)
-      .join(" ");
-    salida.push(
-      clases ? (
-        <span key={clave++} className={clases}>
-          {contenido}
-        </span>
-      ) : (
-        contenido
-      ),
-    );
-  };
-
-  const lineas = texto.split("\n");
-  for (const [indice, linea] of lineas.entries()) {
-    const titulo = /^(#{1,6}\s)(.*)$/.exec(linea);
-    if (titulo) {
-      empujar(titulo[1]!, "marca");
-      pintarLinea(titulo[2]!, empujar);
-    } else if (/^\s*(\*\s*\*\s*\*|---+|~~~+)\s*$/.test(linea)) {
-      empujar(linea, "marca");
-    } else {
-      pintarLinea(linea, empujar);
-    }
-    if (indice < lineas.length - 1) {
-      empujar("\n", "texto");
-    }
-  }
-  return salida;
-}
-
-/** The emphasis stars inside one line. */
 function pintarLinea(
   linea: string,
   empujar: (contenido: string, tipo: "texto" | "marca") => void,
