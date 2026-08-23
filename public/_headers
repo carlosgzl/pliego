@@ -1,0 +1,10 @@
+# Cabeceras que netlify.toml no consigue poner.
+#
+# El `content-type` de netlify.toml lo ignora el CDN para este archivo: se
+# sirve como `application/octet-stream` haga lo que haga la sección
+# `[[headers]]`. El archivo `_headers`, que se copia a la raíz del sitio, sí
+# manda. Y hace falta: hay navegadores que con ese tipo no llegan a ofrecer
+# instalar la aplicación, que es todo el motivo de que exista el manifest.
+/manifest.webmanifest
+  Content-Type: application/manifest+json; charset=utf-8
+  Cache-Control: public, max-age=3600
