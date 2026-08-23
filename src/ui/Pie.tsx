@@ -1,26 +1,38 @@
 /**
- * El pie de la casa y el selector de color, que van juntos abajo.
+ * El pie de la casa, y el selector de color.
  *
- * EL SELECTOR ESTÁ ABAJO A LA DERECHA porque él lo pidió ahí y porque es donde
- * menos estorba: no ocupa sitio en la cabecera, no compite con nada, y quien no
- * lo busca no lo ve. Se abre en un ramillete de ocho puntos y se cierra al
- * elegir o al pinchar fuera.
+ * EL PIE ESTABA FLOTANDO. Cuatro párrafos apilados a la izquierda, todos del
+ * mismo peso y sin nada que los sujetara al borde derecho: la mancha quedaba
+ * colgando en medio de una franja ancha y vacía. Ahora son dos columnas — a la
+ * izquierda qué es esto, a la derecha quién lo firma — y el bloque tiene los
+ * dos extremos apoyados.
  *
- * EL AVISO DE BETA no es un adorno: la aplicación guarda el trabajo de alguien
- * y todavía está creciendo. Decirlo por delante es lo honesto, y ahorra la
- * conversación incómoda si algo falla.
+ * LA FIRMA, EN LUGAR DE «DISEÑADA Y PROGRAMADA POR». Es su firma de verdad,
+ * vectorizada, y lleva al portfolio. Dice lo mismo que la línea de texto que
+ * había y lo dice como se dice: firmando. Va en el color de la aplicación
+ * porque hereda `currentColor`, así que cambia con la paleta.
+ *
+ * SE FUE EL AVISO DE BETA. Estaba repetido —la insignia de aquí al lado, la de
+ * la cabecera, la de la puerta— y a la cuarta vez ya no avisa de nada: se lee
+ * como desconfianza en el propio programa.
  */
 
 import { useEffect, useRef, useState } from "react";
 import { ACENTOS } from "./acento";
-import { Icono } from "./Icono";
+import { Firma } from "./Firma";
 import { useSalida } from "./useSalida";
+
+const PORTFOLIO = "https://portfoliocga.netlify.app";
+const LINKEDIN = "https://www.linkedin.com/in/carlos-gonz%C3%A1lez-alcalde-392121308";
 
 export function SelectorColor({
   valor,
+  oscuro,
   onCambiar,
 }: {
   valor: string;
+  /** El tema de ahora mismo. Ver abajo por qué hace falta saberlo. */
+  oscuro: boolean;
   onCambiar: (clave: string) => void;
 }) {
   const [abierto, setAbierto] = useState(false);
@@ -66,7 +78,15 @@ export function SelectorColor({
               title={acento.nombre}
               aria-label={`Color ${acento.nombre}`}
               className={`acento${valor === acento.clave ? " acento--aqui" : ""}`}
-              style={{ background: acento.claro.acento }}
+              /*
+               * EL PUNTO ENSEÑA EL COLOR QUE VA A SALIR, no el de la paleta de
+               * día. Cada acento lleva dos tonos —uno para papel y otro para
+               * fondo oscuro, porque el mismo azul que se lee sobre crema
+               * desaparece sobre carbón— y aquí se pintaba siempre el claro.
+               * En tema oscuro, entonces, elegías un color y aparecía otro. Era
+               * literalmente lo que él describió.
+               */
+              style={{ background: oscuro ? acento.oscuro.acento : acento.claro.acento }}
               onClick={() => {
                 onCambiar(acento.clave);
                 salida.cerrar();
@@ -94,39 +114,34 @@ export function Pie() {
   return (
     <footer className="pie">
       <div className="pie__dentro">
-        <div className="pie__marca">
-          <span className="pie__nombre">
-            Pliego<span className="marca__punto">.</span>
-          </span>
-          <span className="pie__beta">Beta</span>
+        <div className="pie__columna">
+          <div className="pie__marca">
+            <span className="pie__nombre">
+              Pliego<span className="marca__punto">.</span>
+            </span>
+            <span className="pie__beta">Beta</span>
+          </div>
+
+          <p className="pie__que">
+            Un sitio para escribir libros. Cada obra es un archivo Markdown que se abre en cualquier
+            editor: nada de lo que escribas depende de esta web.
+          </p>
         </div>
 
-        <p className="pie__que">
-          Un sitio para escribir libros. Cada obra es un archivo Markdown que se abre en cualquier
-          editor: nada de lo que escribas depende de esta web.
-        </p>
-
-        <p className="pie__firma">
-          Diseñada y programada por <strong>Carlos González Alcalde</strong>
-          <span className="pie__sep">·</span>
-          <a href="https://portfoliocga.netlify.app" target="_blank" rel="noreferrer noopener">
-            portfolio
-          </a>
-          <span className="pie__sep">·</span>
+        <div className="pie__autoria">
           <a
-            href="https://www.linkedin.com/in/carlos-gonz%C3%A1lez-alcalde-392121308"
+            className="pie__firmante"
+            href={PORTFOLIO}
             target="_blank"
             rel="noreferrer noopener"
+            title="Carlos González Alcalde — ver su portfolio"
           >
+            <Firma alto={62} titulo="Carlos González Alcalde" />
+          </a>
+          <a className="pie__red" href={LINKEDIN} target="_blank" rel="noreferrer noopener">
             LinkedIn
           </a>
-        </p>
-
-        <p className="pie__aviso">
-          <Icono nombre="aviso" tamano={13} />
-          Esto es una <strong>beta</strong>: está en uso y en obras a la vez. Guarda una copia de lo
-          que te importe — desde Exportar, en cualquier libro.
-        </p>
+        </div>
       </div>
     </footer>
   );

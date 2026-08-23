@@ -55,6 +55,18 @@ export function App() {
 
   /* ── Theme and accent ────────────────────────────────────────────────────── */
 
+  /*
+   * Qué tema hay puesto AHORA MISMO, resuelto.
+   *
+   * «sistema» no es un tema, es una pregunta, y hasta que no se le pregunta al
+   * navegador no se sabe la respuesta. Hace falta guardarla porque el selector
+   * de color tiene que enseñar el tono que va a salir de verdad: cada acento
+   * lleva uno para papel y otro para fondo oscuro, y pintar siempre el claro
+   * era exactamente lo que hacía que el círculo elegido y el color que aparecía
+   * luego no coincidieran.
+   */
+  const [oscuro, setOscuro] = useState(false);
+
   useEffect(() => {
     const raiz = document.documentElement;
     const aplicar = () => {
@@ -62,6 +74,7 @@ export function App() {
       const tema =
         ajustes.tema === "sistema" ? (oscuroDelSistema ? "oscuro" : "claro") : ajustes.tema;
       raiz.dataset.tema = tema;
+      setOscuro(tema === "oscuro");
       // The accent is repainted with the theme, not only when it changes: the
       // same blue that reads on paper disappears on charcoal, so each accent
       // carries a light pair and a dark one.
@@ -236,10 +249,6 @@ export function App() {
     return (
       <div className="app">
         <Entrada onEntrado={() => setDentro(true)} onVisita={() => setVisita(true)} />
-        <SelectorColor
-          valor={ajustes.acento}
-          onCambiar={(acento) => cambiarAjustes({ ...ajustes, acento })}
-        />
         <Avisos />
       </div>
     );
@@ -289,12 +298,22 @@ export function App() {
               onRecargar={() => void sincronizarYa(true).then(() => recargar(true))}
             />
           )}
+          {/*
+            * EL SELECTOR DE COLOR VIVE AQUÍ Y EN NINGÚN OTRO SITIO.
+            *
+            * Estaba colgado de la aplicación entera, así que aparecía también
+            * en la puerta y encima del manuscrito. Elegir el color de la casa
+            * es algo que se hace una vez y desde la estantería; tenerlo flotando
+            * sobre el texto mientras se escribe es una cosa de colores en la
+            * esquina de la vista, que es justo lo que el taller quita.
+            */}
+          <SelectorColor
+            valor={ajustes.acento}
+            oscuro={oscuro}
+            onCambiar={(acento) => cambiarAjustes({ ...ajustes, acento })}
+          />
         </div>
       )}
-      <SelectorColor
-        valor={ajustes.acento}
-        onCambiar={(acento) => cambiarAjustes({ ...ajustes, acento })}
-      />
       <Avisos />
     </div>
   );

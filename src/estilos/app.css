@@ -1672,10 +1672,29 @@
 
 /* ── Pantalla de inicio ───────────────────────────────────────────────────── */
 
+/*
+ * EL PIE, PEGADO ABAJO. Esto es lo otro que le hacía «flotar».
+ *
+ * La estantería es la caja que se desplaza, y el pie es su último hijo. Con la
+ * estantería a medias —dos o tres libros— el contenido no llega abajo, así que
+ * el pie terminaba a media pantalla con CIENTO VEINTE PÍXELES de fondo vacío
+ * por debajo. Y como el pie tiene su propio color de panel, se leía como una
+ * franja suelta flotando sobre la página en lugar de como el final de esta.
+ *
+ * En columna y con `margin-top: auto`, el hueco sobrante se lo come el espacio
+ * ANTES del pie: con poco contenido se va al borde de abajo, y con mucho sigue
+ * al texto como siempre.
+ */
 .inicio {
   flex: 1;
   overflow: auto;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.inicio > .pie {
+  margin-top: auto;
 }
 
 .inicio__dentro {
@@ -1693,6 +1712,26 @@
   justify-content: space-between;
   gap: 1.5rem;
   flex-wrap: wrap;
+}
+
+.inicio__marca {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/*
+ * El saludo, en tono de frase.
+ *
+ * Iba al lado de la insignia de «beta» y con su misma letra en versalitas, de
+ * modo que las dos se leían de corrido: «BETA DE MADRUGADA». En su propia línea
+ * y en minúscula ya se lee como lo que es, un saludo, y no como una etiqueta de
+ * la versión.
+ */
+.inicio__saludo {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--tenue);
 }
 
 .inicio__acciones {
@@ -1772,6 +1811,7 @@
 }
 
 .cifra__nombre {
+  line-height: 1.35;
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -1946,13 +1986,31 @@
   margin-top: 3rem;
 }
 
+/*
+ * DOS COLUMNAS, y es lo que le quita el aire de estar flotando.
+ *
+ * Antes eran cuatro párrafos apilados a la izquierda: la mancha colgaba en
+ * mitad de una franja ancha y vacía, sin nada que la sujetara por el otro lado.
+ * Con la firma anclada a la derecha, el bloque tiene sus dos extremos apoyados
+ * y el pie deja de parecer un sobrante de la página.
+ */
 .pie__dentro {
   max-width: 64rem;
   margin: 0 auto;
   padding: 2.25rem 1.5rem 2.5rem;
   display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem 3rem;
+  flex-wrap: wrap;
+}
+
+.pie__columna {
+  display: flex;
   flex-direction: column;
   gap: 0.7rem;
+  min-width: 0;
+  flex: 1 1 22rem;
 }
 
 .pie__marca {
@@ -1987,41 +2045,78 @@
   color: var(--tenue);
 }
 
-.pie__firma {
-  margin: 0.3rem 0 0;
-  font-size: 0.82rem;
-  color: var(--ink-suave);
+/* ── La firma ─────────────────────────────────────────────────────────────── */
+
+.pie__autoria {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+  flex: none;
 }
 
-.pie__firma strong {
-  font-weight: 600;
-  color: var(--ink);
+/*
+ * La firma va en el acento, pero apagada.
+ *
+ * A tinta entera competiría con el nombre de la aplicación, y una firma no
+ * grita: se ve cuando la buscas. Al pasar por encima sube a color entero, que
+ * es lo que dice «esto se puede pulsar» sin poner un subrayado debajo de un
+ * trazo a mano.
+ */
+.pie__firmante {
+  display: inline-flex;
+  color: var(--acento);
+  opacity: 0.65;
+  border-radius: var(--radio);
+  transition: opacity var(--paso), transform var(--paso);
 }
 
-.pie__firma a {
-  color: var(--acento-ink);
+.pie__firmante:hover,
+.pie__firmante:focus-visible {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.firma {
+  display: block;
+  overflow: visible;
+}
+
+.pie__red {
+  font-size: 0.76rem;
+  color: var(--tenue);
   text-underline-offset: 2px;
 }
 
-.pie__sep {
-  margin: 0 0.5rem;
-  color: var(--linea-fuerte);
+.pie__red:hover {
+  color: var(--acento-ink);
 }
 
-.pie__aviso {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 0.4rem 0 0;
-  font-size: 0.76rem;
-  line-height: 1.55;
-  color: var(--tenue);
+/*
+ * El pie en un teléfono, y por qué esta consulta está AQUÍ.
+ *
+ * Estas mismas reglas vivían en el bloque de móvil de más arriba y no hacían
+ * nada: en CSS, a igualdad de especificidad gana la última que se lee, y las
+ * reglas de `.pie` de este bloque van después. Una consulta de medios no pesa
+ * más que una regla normal — solo se aplica a veces. Así que la excepción tiene
+ * que ir detrás de lo que corrige, no delante.
+ *
+ * En un teléfono no hay dos columnas que valgan: la firma pasa debajo y a la
+ * izquierda, alineada con todo lo demás. Pegada a la derecha, con el bloque de
+ * texto a la izquierda, parecía un adorno suelto en la esquina.
+ */
+@media (max-width: 760px) {
+  .pie__dentro {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.5rem;
+  }
+
+  .pie__autoria {
+    align-items: flex-start;
+  }
 }
 
-.pie__aviso svg {
-  flex: none;
-  color: var(--acento);
-}
 
 /* El mismo sello de beta, pequeño, junto al logotipo de la cabecera. */
 .marca__beta {
@@ -2090,6 +2185,160 @@
   width: 100%;
 }
 
+/* ── «Tus libros están a salvo» ───────────────────────────────────────────── */
+
+/*
+ * La respuesta primero y grande, el cableado detrás.
+ *
+ * Lo que se pregunta al abrir esta sección es una sola cosa: si lo que escribo
+ * se va a perder. Antes había que deducirlo de tres estados técnicos, y dos de
+ * ellos dicen «no responde» en el caso normal. Aquí la respuesta se lee de un
+ * vistazo y el resto está plegado.
+ */
+.salvo {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--linea);
+  border-left: 3px solid var(--bien);
+  border-radius: var(--radio);
+  background: var(--panel-alto);
+}
+
+.salvo--solo {
+  border-left-color: var(--peligro);
+}
+
+.salvo__punto {
+  width: 8px;
+  height: 8px;
+  margin-top: 0.4rem;
+  border-radius: 50%;
+  flex: none;
+  background: var(--bien);
+}
+
+.salvo--solo .salvo__punto {
+  background: var(--peligro);
+}
+
+.salvo__texto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.salvo__texto strong {
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.salvo__texto .campo__nota {
+  margin: 0;
+}
+
+/* ── Lo opcional, plegado ─────────────────────────────────────────────────── */
+
+.avanzado {
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  background: var(--panel);
+}
+
+.avanzado[open] {
+  padding-bottom: 0.9rem;
+}
+
+.avanzado__titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink-suave);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.avanzado__titulo::-webkit-details-marker {
+  display: none;
+}
+
+/* La punta de flecha, dibujada con el borde: un carácter tipográfico cambiaría
+   de forma con cada letra del sistema. */
+.avanzado__titulo::before {
+  content: "";
+  width: 0.4rem;
+  height: 0.4rem;
+  border-right: 1.5px solid var(--tenue);
+  border-bottom: 1.5px solid var(--tenue);
+  transform: rotate(-45deg);
+  transition: transform var(--paso);
+}
+
+.avanzado[open] .avanzado__titulo::before {
+  transform: rotate(45deg);
+}
+
+.avanzado__pista {
+  margin-inline-start: auto;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--tenue);
+}
+
+.avanzado > *:not(.avanzado__titulo) {
+  margin-inline: 0.9rem;
+}
+
+/* ── El menú del botón derecho ────────────────────────────────────────────── */
+
+/*
+ * Va fijo a la ventana, no dentro del manuscrito.
+ *
+ * Dentro del texto lo arrastraría el desplazamiento y acabaría flotando sobre
+ * un párrafo que no es el suyo. Fijo, con las coordenadas del puntero, se queda
+ * donde se pidió — y si la vista se mueve, se cierra.
+ */
+.menu-texto {
+  position: fixed;
+  z-index: 70;
+  min-width: 14.5rem;
+  padding: 0.3rem;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio-grande);
+  background: var(--panel);
+  box-shadow: 0 18px 44px -20px rgb(0 0 0 / 45%), 0 2px 6px -3px rgb(0 0 0 / 25%);
+  /* `asomar` ya está definida en movimiento.css; aquí solo se usa, para que un
+     único sitio decida cómo aparecen las cosas en toda la aplicación. */
+  animation: asomar var(--veloz) var(--sale);
+}
+
+.menu-texto__cabeza {
+  padding: 0.4rem 0.6rem 0.5rem;
+  border-bottom: 1px solid var(--linea);
+  margin-bottom: 0.25rem;
+  font-size: 0.7rem;
+  color: var(--tenue);
+  font-variant-numeric: tabular-nums;
+}
+
+/* La raya que agrupa: marcas arriba, estructura en medio, portapapeles abajo. */
+.menu-texto__corte {
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--linea);
+}
+
+.menu-texto .menu__opcion {
+  width: 100%;
+}
+
 /* ── Modo escritura ───────────────────────────────────────────────────────── */
 
 /*
@@ -2141,13 +2390,6 @@
   inset-block-end: 0;
   height: auto;
   z-index: 39;
-}
-
-/* En modo escritura, el color flotante también sobra. */
-.taller--escritura ~ .paleta,
-.app:has(.taller--escritura) .paleta {
-  opacity: 0;
-  pointer-events: none;
 }
 
 .taller--escritura .salir-pantalla {

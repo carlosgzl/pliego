@@ -107,6 +107,10 @@ Lo que hace que apetezca escribir aquí, y por qué cada cosa está como está:
   entero por estado (`src/ui/area.ts`). Poner el valor entero hace que el
   navegador **tire su pila de deshacer**: bastaba con escribir `...` para perder
   todo lo deshacible del último rato.
+- **Las marcas están donde está la mano.** Seleccionas, botón derecho, y ahí
+  tienes negrita, cursiva, capítulo y escena — sin subir a la barra. Sin nada
+  seleccionado el botón derecho sigue siendo el del navegador, que es donde vive
+  el corrector ortográfico.
 - **La línea que escribes no se pega al borde de abajo.** Se mide la posición
   real del cursor en píxeles y se mantiene por encima del último cuarto de la
   pantalla; con «escribir en el centro», clavada a media altura.

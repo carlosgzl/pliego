@@ -18,6 +18,7 @@ import {
   type Tema,
 } from "@/datos/ajustes";
 import { guardarClave, leerClave } from "@/datos/clave";
+import { hayCuenta, leerDeCuenta } from "@/datos/cuenta";
 import { comprobarNube, olvidarToken, SITIO_NUBE, type EstadoNube } from "@/datos/nube";
 import { direccionGuardada, guardarDireccion, listarEnServidor, olvidarTunel } from "@/datos/servidor";
 import { FUENTES } from "@/nucleo/fuentes";
@@ -50,7 +51,16 @@ export function PanelAjustes({
   const [direccion, setDireccion] = useState(direccionGuardada() ?? "");
   const [nube, setNube] = useState<EstadoNube | "probando" | null>(null);
   const [servidor, setServidor] = useState<"si" | "no" | "probando" | null>(null);
+  /** Si la cuenta contesta. Es lo único que decide si esto está a salvo. */
+  const [cuenta, setCuenta] = useState(true);
   const rescates = leerRescates();
+
+  /*
+   * «A salvo» significa una cosa y solo una: que lo escrito sale de esta
+   * pestaña. La cuenta basta y no hay que configurarla; el ordenador y la nube
+   * son extras y no cambian la respuesta.
+   */
+  const aSalvo = cuenta || servidor === "si";
 
   useEffect(() => {
     void probarTodo();
@@ -61,8 +71,16 @@ export function PanelAjustes({
   const probarTodo = async () => {
     setNube("probando");
     setServidor("probando");
-    setNube(await comprobarNube());
-    setServidor((await listarEnServidor()) ? "si" : "no");
+    /* En paralelo: encadenadas, con el ordenador apagado y la nube sin
+       contestar, abrir Ajustes se quedaba veinte segundos en «probando…». */
+    const [estadoNube, enServidor, deCuenta] = await Promise.all([
+      comprobarNube(),
+      listarEnServidor(),
+      hayCuenta() ? leerDeCuenta() : Promise.resolve(null),
+    ]);
+    setNube(estadoNube);
+    setServidor(enServidor ? "si" : "no");
+    setCuenta(deCuenta !== null);
   };
 
   return (
@@ -93,94 +111,138 @@ export function PanelAjustes({
       )}
 
       {dentro && (
-      <div className="grupo">
-        <span className="grupo__titulo">Dónde se guardan tus libros</span>
+        <div className="grupo">
+          <span className="grupo__titulo">Tus libros</span>
 
-        <div className="campo">
-          <span className="campo__etiqueta">
-            Tu ordenador
-            <span className="campo__valor">
-              {servidor === "probando" ? "probando…" : servidor === "si" ? "responde" : "no responde"}
-            </span>
-          </span>
-          <p className="campo__nota">
-            Cuando está encendido, Pliego escribe directamente los archivos .md de Drive — los
-            mismos que abre Alexandria. Es la única forma de que el libro sea de verdad un archivo.
-          </p>
+          {/*
+            * ESTA SECCIÓN ERA UN ESQUEMA DE CABLEADO, NO UN AJUSTE.
+            *
+            * Enseñaba «Tu ordenador: no responde», «La nube: falta la clave» y
+            * dos cajas de texto técnicas, así que abrirla daba la sensación de
+            * que algo estaba roto — cuando lo normal, y lo suficiente, es que
+            * ninguna de esas dos cosas esté conectada. Sus palabras fueron
+            * exactas: «es una mierda» y «te dije que no me diera problemas».
+            *
+            * Ahora lo primero y más grande es la única frase que importa: si lo
+            * que escribes está a salvo y si se va a ver en tus otros
+            * navegadores. Eso lo da la cuenta, que no hay que configurar. Lo
+            * demás son dos añadidos opcionales, y están donde deben estar los
+            * añadidos opcionales: plegados.
+            */}
+          <div className={`salvo${aSalvo ? "" : " salvo--solo"}`}>
+            <span className="salvo__punto" />
+            <div className="salvo__texto">
+              <strong>{aSalvo ? "Tus libros están a salvo" : "Solo en este navegador"}</strong>
+              <p className="campo__nota">
+                {aSalvo
+                  ? "Se guardan en tu cuenta en cuanto dejas de escribir. Entra con ella en cualquier ordenador o en el móvil y estarán ahí, tal y como los dejaste. No hay nada que configurar."
+                  : "Ahora mismo no hay conexión con tu cuenta, así que lo que escribas vive solo aquí hasta que vuelva. No se pierde nada: en cuanto haya red, sube solo."}
+              </p>
+            </div>
+          </div>
+
+          <details className="avanzado">
+            <summary className="avanzado__titulo">
+              Añadidos para tu ordenador
+              <span className="avanzado__pista">opcional</span>
+            </summary>
+
+            <p className="campo__nota">
+              Nada de esto hace falta para escribir ni para que tus libros te sigan de un navegador
+              a otro. Sirve para una cosa muy concreta: que cada obra sea además un archivo{" "}
+              <code>.md</code> de verdad en el Drive de tu ordenador, el mismo que abre Alexandria y
+              que puedes leer sin esta web.
+            </p>
+
+            <div className="campo">
+              <span className="campo__etiqueta">
+                Tu ordenador
+                <span className="campo__valor">
+                  {servidor === "probando"
+                    ? "probando…"
+                    : servidor === "si"
+                      ? "conectado"
+                      : "apagado"}
+                </span>
+              </span>
+              <p className="campo__nota">
+                Cuando está encendido, Pliego escribe los <code>.md</code> directamente. Cuando no,
+                lo escrito queda en cola y él lo aplica al volver.
+              </p>
+            </div>
+
+            <div className="campo">
+              <span className="campo__etiqueta">
+                La nube cifrada
+                <span className="campo__valor">
+                  {nube === "probando"
+                    ? "probando…"
+                    : nube === "lista"
+                      ? "conectada"
+                      : nube === "sin-clave"
+                        ? "sin clave"
+                        : nube === "rechazada"
+                          ? "clave incorrecta"
+                          : "no responde"}
+                </span>
+              </span>
+              <p className="campo__nota">
+                El puente hasta el ordenador cuando está apagado ({SITIO_NUBE.replace("https://", "")}).
+                Se cifra aquí, en este navegador: nadie de ahí puede leer una palabra.
+              </p>
+            </div>
+
+            <label className="campo">
+              <span className="campo__etiqueta">Clave de la biblioteca</span>
+              <input
+                className="entrada"
+                type="password"
+                value={clave}
+                autoComplete="off"
+                placeholder="la misma que abre Alexandria"
+                onChange={(evento) => setClave(evento.target.value)}
+              />
+              <span className="campo__nota">
+                Está en <code>biblioteca.clave.txt</code>, en la carpeta de Alexandria de tu
+                ordenador. Sin ella todo sigue funcionando; solo se queda fuera el puente cifrado.
+              </span>
+            </label>
+
+            <label className="campo">
+              <span className="campo__etiqueta">Dirección del servidor</span>
+              <input
+                className="entrada"
+                value={direccion}
+                placeholder="se busca sola — déjalo vacío"
+                onChange={(evento) => setDireccion(evento.target.value)}
+              />
+              <span className="campo__nota">
+                Solo para forzar una: por ejemplo <code>192.168.1.40:4000</code> desde el móvil en
+                tu wifi. Vacío significa «búscalo tú».
+              </span>
+            </label>
+
+            <div style={{ display: "flex", gap: "0.4rem" }}>
+              <button
+                type="button"
+                className="boton boton--principal"
+                onClick={() => {
+                  guardarClave(clave || null);
+                  guardarDireccion(direccion || null);
+                  olvidarToken();
+                  olvidarTunel();
+                  void probarTodo().then(onRecargar);
+                  avisar("Guardado. Volviendo a conectar…");
+                }}
+              >
+                Guardar y reconectar
+              </button>
+              <button type="button" className="boton" onClick={() => void probarTodo()}>
+                Probar
+              </button>
+            </div>
+          </details>
         </div>
-
-        <div className="campo">
-          <span className="campo__etiqueta">
-            La nube
-            <span className="campo__valor">
-              {nube === "probando"
-                ? "probando…"
-                : nube === "lista"
-                  ? "conectada"
-                  : nube === "sin-clave"
-                    ? "falta la clave"
-                    : nube === "rechazada"
-                      ? "clave incorrecta"
-                      : "no responde"}
-            </span>
-          </span>
-          <p className="campo__nota">
-            Con el ordenador apagado, los libros viajan cifrados por la nube de Alexandria
-            ({SITIO_NUBE.replace("https://", "")}) y el ordenador los aplica al volver. Nadie más
-            que tú puede leerlos: se cifran aquí, en este navegador.
-          </p>
-        </div>
-
-        <label className="campo">
-          <span className="campo__etiqueta">Clave de la biblioteca</span>
-          <input
-            className="entrada"
-            type="password"
-            value={clave}
-            autoComplete="off"
-            placeholder="la misma que abre Alexandria"
-            onChange={(evento) => setClave(evento.target.value)}
-          />
-          <span className="campo__nota">
-            Está en <code>biblioteca.clave.txt</code>, en la carpeta de Alexandria de tu ordenador.
-            Sin ella esta web solo puede guardar en este navegador.
-          </span>
-        </label>
-
-        <label className="campo">
-          <span className="campo__etiqueta">Dirección del servidor</span>
-          <input
-            className="entrada"
-            value={direccion}
-            placeholder="se busca sola — déjalo vacío"
-            onChange={(evento) => setDireccion(evento.target.value)}
-          />
-          <span className="campo__nota">
-            Solo si quieres forzar una: por ejemplo <code>192.168.1.40:4000</code> desde el móvil en
-            tu wifi. Vacío significa «búscalo tú».
-          </span>
-        </label>
-
-        <div style={{ display: "flex", gap: "0.4rem" }}>
-          <button
-            type="button"
-            className="boton boton--principal"
-            onClick={() => {
-              guardarClave(clave || null);
-              guardarDireccion(direccion || null);
-              olvidarToken();
-              olvidarTunel();
-              void probarTodo().then(onRecargar);
-              avisar("Guardado. Volviendo a conectar…");
-            }}
-          >
-            Guardar y reconectar
-          </button>
-          <button type="button" className="boton" onClick={() => void probarTodo()}>
-            Probar
-          </button>
-        </div>
-      </div>
       )}
 
       {/* ── Room ───────────────────────────────────────────────────────────── */}

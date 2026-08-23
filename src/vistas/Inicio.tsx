@@ -20,6 +20,7 @@ import { minutosDeLectura } from "@/nucleo/bloques";
 import { DialogoConfirmar, DialogoTexto } from "@/ui/Dialogo";
 import { Icono } from "@/ui/Icono";
 import { Pie } from "@/ui/Pie";
+import { leerSesion } from "@/datos/sesion";
 import { Portada } from "./Portada";
 
 export function Inicio({
@@ -63,12 +64,22 @@ export function Inicio({
     <div className="inicio pantalla">
       <div className="inicio__dentro">
         <header className="inicio__cabecera">
-          <div className="marca">
-            <span className="marca__nombre">
-              Pliego<span className="marca__punto">.</span>
-            </span>
-            <span className="marca__beta">beta</span>
-            <span className="eyebrow">{saludo()}</span>
+          <div className="inicio__marca">
+            <div className="marca">
+              <span className="marca__nombre">
+                Pliego<span className="marca__punto">.</span>
+              </span>
+              <span className="marca__beta">beta</span>
+            </div>
+            {/*
+              * El saludo, EN SU PROPIA LÍNEA Y EN MINÚSCULA.
+              *
+              * Iba pegado a la insignia de «beta» y en versalitas como ella, así
+              * que las dos se leían de corrido: «BETA DE MADRUGADA». Nadie
+              * entiende eso, y con razón — no era una etiqueta de la aplicación,
+              * era un saludo. Abajo, en tono de frase, ya se lee como lo que es.
+              */}
+            <p className="inicio__saludo">{saludo()}</p>
           </div>
 
           <div className="inicio__acciones">
@@ -100,15 +111,36 @@ export function Inicio({
         )}
 
         {dentro && libros.length > 0 && (
+          /*
+           * LAS CIFRAS, CON NOMBRE Y APELLIDOS.
+           *
+           * Decían «hoy», «obra» y «de lectura», y así no se entendía ninguna:
+           * ¿hoy qué? ¿una obra de qué? ¿de lectura de quién? Cada una lleva
+           * ahora una etiqueta que se lee entera —«escritas hoy», «libros en la
+           * estantería»— y detrás, al pasar por encima, la frase completa.
+           */
           <div className="cifras">
-            <Cifra valor={palabras.toLocaleString("es-ES")} nombre="palabras escritas" />
+            <Cifra
+              valor={palabras.toLocaleString("es-ES")}
+              nombre="palabras en total"
+              explica="Todo lo que llevas escrito, sumando los libros de la estantería."
+            />
             <Cifra
               valor={`${hoy > 0 ? "+" : ""}${hoy.toLocaleString("es-ES")}`}
-              nombre="hoy"
+              nombre="escritas hoy"
               apagada={hoy === 0}
+              explica="Cuántas has sumado desde esta mañana. Baja si cortas, porque cortar trescientas palabras no es escribir trescientas palabras."
             />
-            <Cifra valor={String(libros.length)} nombre={libros.length === 1 ? "obra" : "obras"} />
-            <Cifra valor={`${minutosDeLectura(palabras)}′`} nombre="de lectura" />
+            <Cifra
+              valor={String(libros.length)}
+              nombre={libros.length === 1 ? "libro empezado" : "libros empezados"}
+              explica="Cuántas obras hay en tu estantería."
+            />
+            <Cifra
+              valor={tiempoDeLectura(minutosDeLectura(palabras))}
+              nombre="se tarda en leerlo"
+              explica="Lo que tardaría alguien en leerse todo lo que llevas escrito, a ritmo normal."
+            />
           </div>
         )}
 
@@ -250,15 +282,29 @@ export function Inicio({
   );
 }
 
+/**
+ * El saludo de la hora, y a quién.
+ *
+ * Antes devolvía «de madrugada», que no es un saludo sino un complemento de
+ * tiempo colgando de una frase que no estaba. En español, a las tres de la
+ * mañana se dice «buenas noches» igual que a las once, y ya está.
+ */
 function saludo(): string {
   const hora = new Date().getHours();
-  if (hora < 6) {
-    return "de madrugada";
+  const momento =
+    hora < 6 ? "Buenas noches" : hora < 13 ? "Buenos días" : hora < 21 ? "Buenas tardes" : "Buenas noches";
+  const quien = leerSesion()?.usuario;
+  return quien ? `${momento}, ${quien.charAt(0).toUpperCase()}${quien.slice(1)}.` : `${momento}.`;
+}
+
+/** Los minutos de lectura dichos como los diría alguien: «1 h 37 min». */
+function tiempoDeLectura(minutos: number): string {
+  if (minutos < 60) {
+    return `${minutos} min`;
   }
-  if (hora < 13) {
-    return "buenos días";
-  }
-  return hora < 21 ? "buenas tardes" : "buenas noches";
+  const horas = Math.floor(minutos / 60);
+  const resto = minutos % 60;
+  return resto === 0 ? `${horas} h` : `${horas} h ${resto} min`;
 }
 
 /** «hoy», «ayer» o la fecha: lo que diría una persona. */
@@ -281,13 +327,16 @@ function Cifra({
   valor,
   nombre,
   apagada,
+  explica,
 }: {
   valor: string;
   nombre: string;
   apagada?: boolean;
+  /** La frase entera, para quien se quede encima con el ratón. */
+  explica?: string;
 }) {
   return (
-    <div className={`cifra${apagada ? " cifra--apagada" : ""}`}>
+    <div className={`cifra${apagada ? " cifra--apagada" : ""}`} title={explica}>
       <span className="cifra__valor">{valor}</span>
       <span className="cifra__nombre">{nombre}</span>
     </div>

@@ -34,6 +34,7 @@ import {
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import {
@@ -81,6 +82,7 @@ import { BotonBarra, GrupoBarra, MenuBarra, type Accion } from "./BarraTaller";
 import { BarraGadgets } from "./Gadgets";
 import { Galera } from "./Galera";
 import { ListaCapitulos } from "./ListaCapitulos";
+import { MenuTexto, type AccionTexto, type SitioMenu } from "./MenuTexto";
 import { Resaltado, TOPE_RESALTADO } from "./Manuscrito";
 import { PanelDiseno } from "./PanelDiseno";
 import { Lector } from "./Lector";
@@ -124,6 +126,8 @@ export function Taller({
   const escribiendoSolo = ajustes.escritura;
   const [barraAsomada, setBarraAsomada] = useState(false);
   const [aPantalla, setAPantalla] = useState(enPantallaCompleta);
+  /** Dónde se ha pedido el menú del botón derecho, o null si no hay ninguno. */
+  const [menuTexto, setMenuTexto] = useState<SitioMenu | null>(null);
 
   const area = useRef<HTMLTextAreaElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -494,7 +498,124 @@ export function Taller({
   const negrita = () => conSeleccion((t, d, h) => envolver(t, d, h, "**"));
   const cursiva = () => conSeleccion((t, d, h) => envolver(t, d, h, "*"));
   const capitulo = () => aplicar(alternarTitulo(cuerpo, area.current?.selectionStart ?? 0, 1));
+  const subtitulo = () => aplicar(alternarTitulo(cuerpo, area.current?.selectionStart ?? 0, 2));
   const escena = () => aplicar(nuevaEscena(cuerpo, area.current?.selectionStart ?? 0));
+
+  /* ── El menú del botón derecho ───────────────────────────────────────────── */
+
+  /**
+   * Cortar y copiar por la vía del navegador.
+   *
+   * `execCommand` sigue siendo lo único que copia sin pedir permisos ni abrir
+   * un aviso, y exige que el campo tenga el foco con su selección puesta — que
+   * la tiene, porque pulsar en el menú no se la quita a un textarea.
+   */
+  const alPortapapeles = (cortando: boolean) => {
+    const nodo = area.current;
+    if (!nodo) {
+      return;
+    }
+    nodo.focus();
+    try {
+      if (!document.execCommand(cortando ? "cut" : "copy")) {
+        throw new Error("no");
+      }
+    } catch {
+      avisar(`Usa Ctrl+${cortando ? "X" : "C"}: el navegador no deja hacerlo desde aquí.`, "error");
+    }
+  };
+
+  const pegar = async () => {
+    const nodo = area.current;
+    if (!nodo) {
+      return;
+    }
+    try {
+      const texto = await navigator.clipboard.readText();
+      if (!texto) {
+        return;
+      }
+      const valor = nodo.value;
+      const desde = nodo.selectionStart;
+      const caret = desde + texto.length;
+      aplicar({
+        texto: valor.slice(0, desde) + texto + valor.slice(nodo.selectionEnd),
+        desde: caret,
+        hasta: caret,
+      });
+    } catch {
+      /* Leer el portapapeles necesita un permiso que el navegador puede negar
+         —y en Firefox sencillamente no existe—. Se dice cómo hacerlo a mano en
+         lugar de dejar un botón que no hace nada. */
+      avisar("Usa Ctrl+V: el navegador no deja leer el portapapeles desde aquí.", "error");
+    }
+  };
+
+  const accionesTexto: AccionTexto[] = [
+    { clave: "b", nombre: "Negrita", icono: "negrita", atajo: "Ctrl+B", hacer: negrita },
+    { clave: "i", nombre: "Cursiva", icono: "cursiva", atajo: "Ctrl+I", hacer: cursiva },
+    {
+      clave: "cap",
+      nombre: "Convertir en capítulo",
+      icono: "capitulo",
+      atajo: "Ctrl+1",
+      corte: true,
+      hacer: capitulo,
+    },
+    {
+      clave: "sub",
+      nombre: "Convertir en escena",
+      icono: "capitulos",
+      atajo: "Ctrl+2",
+      hacer: subtitulo,
+    },
+    {
+      clave: "esc",
+      nombre: "Separar escena aquí",
+      icono: "escena",
+      atajo: "Ctrl+↵",
+      hacer: escena,
+    },
+    {
+      clave: "cortar",
+      nombre: "Cortar",
+      icono: "papelera",
+      atajo: "Ctrl+X",
+      corte: true,
+      hacer: () => alPortapapeles(true),
+    },
+    {
+      clave: "copiar",
+      nombre: "Copiar",
+      icono: "copiar",
+      atajo: "Ctrl+C",
+      hacer: () => alPortapapeles(false),
+    },
+    {
+      clave: "pegar",
+      nombre: "Pegar",
+      icono: "descargar",
+      atajo: "Ctrl+V",
+      hacer: () => void pegar(),
+    },
+  ];
+
+  /**
+   * Abrir el menú propio, PERO SOLO CON ALGO SELECCIONADO.
+   *
+   * Sin selección se deja pasar el del navegador, que es donde vive el
+   * corrector: pinchar una palabra subrayada en rojo y que te proponga la
+   * corrección con el diccionario del sistema vale más que cualquier menú que
+   * se pueda escribir aquí.
+   */
+  const alBotonDerecho = (evento: ReactMouseEvent<HTMLTextAreaElement>) => {
+    const nodo = evento.currentTarget;
+    if (nodo.selectionStart === nodo.selectionEnd) {
+      return;
+    }
+    evento.preventDefault();
+    setMenuTexto({ x: evento.clientX, y: evento.clientY });
+  };
 
   const alTeclear = (evento: ReactKeyboardEvent<HTMLTextAreaElement>) => {
     const nodo = evento.currentTarget;
@@ -991,6 +1112,7 @@ export function Taller({
                   )
                 }
                 onKeyDown={alTeclear}
+                onContextMenu={alBotonDerecho}
                 onSelect={(evento) => setCursor(evento.currentTarget.selectionStart)}
                 onClick={(evento) => setCursor(evento.currentTarget.selectionStart)}
               />
@@ -1081,6 +1203,15 @@ export function Taller({
             <Icono nombre="encoger" />
           </button>
         </>
+      )}
+
+      {menuTexto && (
+        <MenuTexto
+          sitio={menuTexto}
+          cabecera={<PalabrasSeleccionadas area={area.current} />}
+          acciones={accionesTexto}
+          onCerrar={() => setMenuTexto(null)}
+        />
       )}
 
       {leyendo && <Lector meta={meta} cuerpo={cuerpo} onCerrar={() => setLeyendo(false)} />}
@@ -1220,6 +1351,25 @@ function Previa({
         </div>
       </div>
       {lado === "izquierda" && tirador}
+    </>
+  );
+}
+
+/**
+ * Cuánto hay seleccionado, arriba del menú.
+ *
+ * Es la pregunta que uno se hace justo cuando acaba de seleccionar un trozo —«¿y
+ * esto cuánto es?»— y aquí sale gratis, porque la selección ya está a mano.
+ */
+function PalabrasSeleccionadas({ area }: { area: HTMLTextAreaElement | null }) {
+  if (!area) {
+    return null;
+  }
+  const trozo = area.value.slice(area.selectionStart, area.selectionEnd);
+  const palabras = contarPalabras(trozo);
+  return (
+    <>
+      {palabras.toLocaleString("es-ES")} {palabras === 1 ? "palabra" : "palabras"} seleccionadas
     </>
   );
 }
