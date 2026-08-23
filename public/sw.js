@@ -128,6 +128,26 @@ async function estatico(peticion) {
   const respuesta = await fetch(peticion);
   if (respuesta && respuesta.ok && respuesta.type === "basic") {
     await almacen.put(peticion, respuesta.clone());
+    await podar(almacen);
   }
   return respuesta;
+}
+
+/**
+ * Cuántos archivos se guardan como mucho.
+ *
+ * Los nombres llevan hash, así que cada despliegue estrena archivo y el
+ * anterior se queda ahí para siempre: son trescientos y pico kB por versión,
+ * que en un teléfono acaban siendo megas de código muerto. Se guardan los
+ * últimos y se van los más viejos — y si alguna vez hace falta uno que se ha
+ * ido, se vuelve a bajar, que es lo que pasaría igualmente sin caché.
+ */
+const TOPE_ESTATICO = 24;
+
+async function podar(almacen) {
+  const claves = await almacen.keys();
+  // `keys()` devuelve en orden de inserción: los primeros son los más viejos.
+  for (const vieja of claves.slice(0, Math.max(0, claves.length - TOPE_ESTATICO))) {
+    await almacen.delete(vieja);
+  }
 }
