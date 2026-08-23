@@ -63,14 +63,19 @@ export function sincronizarYa(porLasBuenas = false): Promise<Catalogo | null> {
  * Se llama una vez desde la aplicación entera, no una por pantalla: dos
  * relojes andando serían dos sincronizaciones cada tres minutos.
  */
-export function arrancarLatido(): () => void {
+export function arrancarLatido(alSincronizar?: (catalogo: Catalogo) => void): () => void {
   let reloj: number | null = null;
 
   const mirar = () => {
     void sincronizarYa().then((catalogo) => {
-      if (catalogo) {
-        notificarCambio();
+      if (!catalogo) {
+        return;
       }
+      /* Se entrega el catálogo RECIÉN HECHO, con sus indicadores de quién ha
+         contestado. Avisar a secas obligaría a la pantalla a sincronizar otra
+         vez para saberlo, que es el bucle que esto evita. */
+      alSincronizar?.(catalogo);
+      notificarCambio();
     });
   };
 

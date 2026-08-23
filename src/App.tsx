@@ -17,6 +17,7 @@ import {
   alCambiarBiblioteca,
   borrarLibro,
   cargarCatalogo,
+  catalogoDeCache,
   crearLibro,
   duplicarLibro,
   renombrarLibro,
@@ -150,13 +151,18 @@ export function App() {
     if (!dentro) {
       return;
     }
-    const parar = arrancarLatido();
-    const dejar = alCambiarBiblioteca(() => void recargar(true));
+    const parar = arrancarLatido(setCatalogo);
+    /* Repintar con lo que ya hay en este navegador, SIN volver a la red: quien
+       ha ido a la red es el latido, y responderle con otra sincronización sería
+       morderse la cola. */
+    const dejar = alCambiarBiblioteca(() =>
+      setCatalogo((previo) => (hayEntrado() ? catalogoDeCache(previo) : previo)),
+    );
     return () => {
       parar();
       dejar();
     };
-  }, [dentro, recargar]);
+  }, [dentro]);
 
   /* ── Navigation ──────────────────────────────────────────────────────────── */
 

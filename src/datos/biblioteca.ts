@@ -277,6 +277,28 @@ export async function sincronizar(): Promise<Catalogo> {
 export const cargarCatalogo = sincronizar;
 
 /**
+ * La estantería tal y como está en este navegador, SIN tocar la red.
+ *
+ * Es lo que se pinta cuando la sincronización de fondo avisa de que algo ha
+ * cambiado. Volver a sincronizar en ese momento sería morderse la cola: el
+ * latido sincroniza, avisa, la estantería sincroniza, eso vuelve a avisar…
+ * Aquí ya está todo fundido en la caché; basta con leerlo.
+ *
+ * Los indicadores de quién responde se heredan del último intento de verdad,
+ * porque esta lectura no ha preguntado a nadie y no tiene nada que decir sobre
+ * ello.
+ */
+export function catalogoDeCache(previo?: Catalogo | null): Catalogo {
+  return {
+    libros: catalogar(leerCache()),
+    via: previo?.via ?? "local",
+    servidorVivo: previo?.servidorVivo ?? false,
+    nubeViva: previo?.nubeViva ?? false,
+    cuentaViva: previo?.cuentaViva ?? false,
+  };
+}
+
+/**
  * Lo que le falta a cada sitio, enviado sin que nadie espere.
  *
  * Al ordenador se le mandan los libros que aquí son más nuevos —que es como un
