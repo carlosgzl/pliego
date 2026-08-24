@@ -887,8 +887,235 @@
   min-height: 12rem;
 }
 
+/*
+ * La portada del panel es GRANDE, porque ahora se trabaja encima.
+ *
+ * Con 7,5 rem era una miniatura de referencia: valía para comprobar el color y
+ * poco más. Desde que se arrastran cosas por ella, tiene que ser un lienzo — y
+ * uno donde quepa el dedo, no solo el ratón.
+ */
 .panel__portada {
-  width: 7.5rem;
+  width: 11.5rem;
+}
+
+.lienzo {
+  cursor: grab;
+  touch-action: none; /* o el móvil desplaza la página en vez de mover el sello */
+  user-select: none;
+}
+
+.lienzo:active {
+  cursor: grabbing;
+}
+
+/* ── Plantillas de portada ────────────────────────────────────────────────── */
+
+/*
+ * La recomendación, con su portada al lado y su motivo debajo.
+ *
+ * Va más grande que las demás y con el nombre en negrita porque es una
+ * respuesta, no una opción más de una lista; y lleva el porqué escrito, que es
+ * lo que la separa de un horóscopo.
+ */
+.sugerida {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.7rem;
+  border: 1px solid var(--acento);
+  border-radius: var(--radio-grande);
+  background: var(--acento-tenue);
+  text-align: left;
+  transition: transform var(--veloz) var(--sale), box-shadow var(--normal) var(--sale);
+}
+
+.sugerida:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px -18px rgb(0 0 0 / 45%);
+}
+
+.sugerida__muestra {
+  width: 3.4rem;
+  flex: none;
+}
+
+.sugerida__texto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.sugerida__texto strong {
+  font-size: 0.9rem;
+  color: var(--acento-ink);
+}
+
+.plantillas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4.4rem, 1fr));
+  gap: 0.75rem 0.6rem;
+}
+
+.plantilla {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  text-align: center;
+  transition: transform var(--veloz) var(--sale);
+}
+
+.plantilla:hover {
+  transform: translateY(-2px);
+}
+
+.plantilla__nombre {
+  font-size: 0.66rem;
+  color: var(--tenue);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Materiales ───────────────────────────────────────────────────────────── */
+
+.materiales {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4rem, 1fr));
+  gap: 0.5rem;
+}
+
+.material {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-items: center;
+  padding: 0.35rem;
+  border: 1px solid transparent;
+  border-radius: var(--radio);
+}
+
+.material--aqui {
+  border-color: var(--acento);
+  background: var(--acento-tenue);
+}
+
+/* La muestra enseña la textura sobre el color REAL de la portada, no sobre un
+   gris de catálogo: una trama se ve distinta sobre crema que sobre carbón. */
+.material__muestra {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  border-radius: 3px;
+  border: 1px solid rgb(0 0 0 / 18%);
+  background-blend-mode: soft-light;
+}
+
+.material__nombre {
+  font-size: 0.66rem;
+  color: var(--tenue);
+}
+
+/* ── Capas: lo que hay puesto encima ──────────────────────────────────────── */
+
+.botonera {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.capas {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  overflow: hidden;
+}
+
+.capa {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.2rem 0.3rem;
+  background: var(--panel);
+  transition: background-color var(--veloz) var(--sale);
+}
+
+.capa--aqui {
+  background: var(--acento-tenue);
+}
+
+.capa__nombre {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 1;
+  min-width: 0;
+  padding: 0.3rem 0.25rem;
+  font-size: 0.78rem;
+  color: var(--ink-suave);
+  text-align: left;
+}
+
+.capa__nombre span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.elegido {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.8rem;
+  border: 1px solid var(--acento);
+  border-radius: var(--radio);
+  background: var(--panel-alto);
+  animation: surgir var(--normal) var(--sale);
+}
+
+/*
+ * Los nueve sitios, dibujados como lo que son: una portada partida en tres.
+ *
+ * Un desplegable con «arriba a la izquierda, arriba en el centro…» obliga a
+ * traducir palabras a posiciones. Una rejilla de nueve cuadros con la misma
+ * proporción que la portada se entiende sin leer nada.
+ */
+.rejilla-sitios {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  width: 5.2rem;
+  aspect-ratio: 2 / 3;
+}
+
+.sitio {
+  border: 1px solid var(--linea-fuerte);
+  border-radius: 2px;
+  background: var(--panel);
+  transition: background-color var(--veloz) var(--sale), border-color var(--veloz) var(--sale);
+}
+
+.sitio:hover {
+  border-color: var(--acento);
+}
+
+.sitio--aqui {
+  background: var(--acento);
+  border-color: var(--acento);
+}
+
+.entrada--area {
+  resize: vertical;
+  min-height: 3.4rem;
+  font: inherit;
+}
+
+.entrada--color {
+  padding: 0.2rem;
+  height: 2.2rem;
+  cursor: pointer;
 }
 
 .panel__pestanas {
@@ -2035,9 +2262,6 @@
   transform-origin: right center;
 }
 
-.paleta__ramo--cerrando {
-  transform-origin: right center;
-}
 
 /* El pie: solo en las pantallas de estar, nunca dentro del taller. */
 .pie {

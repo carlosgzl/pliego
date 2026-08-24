@@ -118,6 +118,62 @@ describe("el archivo del libro", () => {
     expect(portada.fuenteSub).toBeUndefined();
   });
 
+  it("la textura y lo puesto a mano sobreviven al viaje al disco", () => {
+    // Es EL contrato: si esto no vuelve igual, una portada trabajada durante
+    // media hora se pierde al cerrar el libro.
+    const meta = metaPorDefecto("Con adornos");
+    meta.portada.textura = "lino";
+    meta.portada.elementos = [
+      {
+        id: "e1",
+        tipo: "texto",
+        contenido: "PRIMERA\nEDICIÓN",
+        x: 82.5,
+        y: 14,
+        ancho: 40,
+        tamano: 0.7,
+        giro: -6,
+        tracking: 0.18,
+        versalitas: true,
+        alineacion: "derecha",
+      },
+      { id: "e2", tipo: "imagen", contenido: "data:image/webp;base64,AAAA", x: 20, y: 80, ancho: 25, opacidad: 0.4, redondez: 50 },
+    ];
+
+    const escrito = componer(meta, "Prosa.");
+    const vuelta = descomponer(escrito).meta.portada;
+
+    // Una sola línea: el JSON de la portada tiene que seguir siendo YAML válido
+    // o el archivo deja de abrirse en Obsidian.
+    const linea = escrito.split("\n").find((l) => l.startsWith("portada:"));
+    expect(linea).toBeDefined();
+    expect(linea).toContain("PRIMERA");
+
+    expect(vuelta.textura).toBe("lino");
+    expect(vuelta.elementos).toHaveLength(2);
+    expect(vuelta.elementos?.[0]?.contenido).toBe("PRIMERA\nEDICIÓN");
+    expect(vuelta.elementos?.[0]?.giro).toBe(-6);
+    expect(vuelta.elementos?.[0]?.versalitas).toBe(true);
+    expect(vuelta.elementos?.[1]?.redondez).toBe(50);
+  });
+
+  it("una portada de antes de las texturas se abre sin ellas y sin romperse", () => {
+    const viejo = [
+      "---",
+      "titulo: De antes",
+      'portada: {"diseno":"sello","color":"#111","tinta":"#eee","fuente":"garamond"}',
+      "---",
+      "",
+      "Texto.",
+    ].join("\n");
+
+    const { portada } = descomponer(viejo).meta;
+
+    expect(portada.textura).toBeUndefined();
+    expect(portada.elementos).toBeUndefined();
+    expect(portada.color).toBe("#111");
+  });
+
   it("no escribe la pila de fuentes en el disco (es derivada)", () => {
     const salida = componer(metaPorDefecto("X"), "");
     expect(salida).not.toContain("fuentePila");

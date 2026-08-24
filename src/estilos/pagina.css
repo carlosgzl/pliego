@@ -421,3 +421,120 @@
     display: block !important;
   }
 }
+
+/* ── El material de la tapa ───────────────────────────────────────────────── */
+
+/*
+ * TODAS LAS TEXTURAS ESTÁN DIBUJADAS, NINGUNA ES UNA FOTO.
+ *
+ * Son degradados repetidos de CSS y un ruido generado con un filtro SVG en
+ * línea. Podría haberse resuelto con seis imágenes de tela escaneada y habría
+ * quedado mejor a la primera, pero la portada viaja DENTRO del archivo del
+ * libro: cada textura en mapa de bits serían cientos de kB metidos en un `.md`
+ * que tiene que seguir abriéndose en Obsidian. Dibujadas cuestan cero bytes y
+ * se ven igual a cualquier tamaño.
+ *
+ * Van con `mix-blend-mode` y muy poca opacidad. Una textura que se VE es un
+ * estampado; una que solo se nota es un material. Con mezcla, además, la trama
+ * se oscurece sobre los colores claros y se aclara sobre los oscuros ella sola,
+ * que es lo que hace la luz sobre una tela de verdad.
+ */
+.portada__textura {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+  opacity: 0.55;
+}
+
+/* Trama cruzada finísima: dos series de rayas a 90 grados. */
+.textura--lino {
+  background-image:
+    repeating-linear-gradient(0deg, rgb(255 255 255 / 55%) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgb(0 0 0 / 40%) 0 1px, transparent 1px 3px);
+}
+
+/* Verjurado: los corondeles finos y, cada centímetro, un puntizón más marcado.
+   Es exactamente cómo se ve al trasluz un papel hecho a mano. */
+.textura--verjurado {
+  background-image:
+    repeating-linear-gradient(0deg, rgb(255 255 255 / 40%) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(90deg, rgb(0 0 0 / 30%) 0 1px, transparent 1px 26px);
+}
+
+/* Tela: la misma trama que el lino pero apretada y en diagonal, que es como se
+   teje una tapa de editorial. */
+.textura--tela {
+  background-image:
+    repeating-linear-gradient(45deg, rgb(255 255 255 / 45%) 0 1px, transparent 1px 2px),
+    repeating-linear-gradient(-45deg, rgb(0 0 0 / 45%) 0 1px, transparent 1px 2px);
+  opacity: 0.4;
+}
+
+/* Cartón: fibra corta y desordenada, tres frecuencias que no encajan entre sí
+   para que no se vea el patrón repetirse. */
+.textura--carton {
+  background-image:
+    repeating-linear-gradient(12deg, rgb(0 0 0 / 22%) 0 1px, transparent 1px 5px),
+    repeating-linear-gradient(-37deg, rgb(255 255 255 / 22%) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(78deg, rgb(0 0 0 / 14%) 0 1px, transparent 1px 11px);
+  opacity: 0.6;
+}
+
+/* Veta: rayas largas y de grosor desigual, como madera o papel de aguas. */
+.textura--veta {
+  background-image:
+    repeating-linear-gradient(
+      92deg,
+      rgb(0 0 0 / 24%) 0 2px,
+      transparent 2px 7px,
+      rgb(255 255 255 / 18%) 7px 8px,
+      transparent 8px 19px
+    );
+  opacity: 0.5;
+}
+
+/*
+ * Grano de impresión, con ruido de verdad.
+ *
+ * `feTurbulence` genera ruido fractal en el propio navegador — es el mismo
+ * filtro con el que se hacen las nubes en un programa de dibujo—, así que esto
+ * es una textura aleatoria sin repetición visible que cabe en una línea de CSS.
+ */
+.textura--grano {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23r)' opacity='0.55'/%3E%3C/svg%3E");
+  opacity: 0.35;
+}
+
+/* ── Lo que se coloca a mano ──────────────────────────────────────────────── */
+
+/*
+ * Un elemento puesto por quien diseña la portada.
+ *
+ * Se posiciona por su CENTRO —de ahí el `translate(-50%, -50%)` que lleva en el
+ * estilo en línea— porque es lo que uno espera al arrastrar: el punto que
+ * agarras es el que sigue al ratón. Anclándolo por la esquina, girar un sello
+ * lo haría además desplazarse, y eso al arrastrar se siente roto.
+ */
+.portada__puesto {
+  position: absolute;
+  z-index: 3;
+  transform-origin: center;
+}
+
+.portada__puesto--texto {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.portada__puesto--imagen {
+  height: auto;
+  object-fit: contain;
+}
+
+/* El marco del que se está editando: solo en el panel, nunca en el libro. */
+.portada--grande .portada__puesto--elegido {
+  outline: 1.5px dashed var(--acento);
+  outline-offset: 3px;
+}

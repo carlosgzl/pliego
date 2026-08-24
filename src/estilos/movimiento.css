@@ -145,6 +145,24 @@
   animation: crecer var(--normal) var(--resorte);
 }
 
+/* Los menús de la barra nacen en su botón, que está arriba: crecen hacia abajo
+   desde ahí y no desde su propio centro. La animación de entrada la pone
+   `app.css`; aquí solo el punto por el que crecen. */
+.menu__lista {
+  transform-origin: top right;
+}
+
+/*
+ * Al cambiar de pestaña en un panel, el contenido ENTRA.
+ *
+ * Sin esto se sustituye en un fotograma y parece que la pantalla ha dado un
+ * salto: cambian veinte controles a la vez y el ojo no sabe si sigue en el
+ * mismo sitio. Ocho píxeles de subida bastan para contar que esto es nuevo.
+ */
+.panel__cuerpo > * {
+  animation: surgir var(--normal) var(--sale);
+}
+
 /* ── Botones: el gesto de pulsar ──────────────────────────────────────────── */
 
 /*
@@ -212,6 +230,15 @@
  * capricho: al abrir estás esperando algo y el movimiento largo se disfruta; al
  * cerrar ya has decidido, y cualquier demora se siente como que la aplicación
  * va lenta. Entrar con calma, salir sin ceremonia.
+ *
+ * ⚠ CADA SELECTOR DE SALIDA LLEVA SU CLASE BASE DELANTE —`.aviso.aviso--cerrando`
+ * y no `.aviso--cerrando`— Y ESO NO ES ADORNO. `app.css` se carga DESPUÉS que
+ * este archivo, así que su `.aviso { animation: crecer … }` ganaba por orden a
+ * un `.aviso--cerrando` de aquí: las dos reglas tienen la misma especificidad y
+ * en CSS empatar significa que manda la última. Tres animaciones de salida —el
+ * menú de la barra, los avisos y la paleta de color— estaban escritas, se
+ * aplicaban en el HTML y NO SE VEÍAN, y por eso todo se cerraba de golpe.
+ * Doblando la clase, la salida gana esté donde esté el archivo.
  */
 @keyframes salir-derecha {
   to {
@@ -251,32 +278,32 @@
   }
 }
 
-.panel--cerrando {
+.panel.panel--cerrando {
   animation: salir-derecha var(--normal) var(--entra) forwards;
 }
 
-.panel--izquierda.panel--cerrando {
+.panel.panel--izquierda.panel--cerrando {
   animation-name: salir-izquierda;
 }
 
-.panel-velo--cerrando,
-.velo--cerrando {
+.panel-velo.panel-velo--cerrando,
+.velo.velo--cerrando {
   animation: desvanecer var(--normal) var(--entra) forwards;
 }
 
-.dialogo--cerrando {
+.dialogo.dialogo--cerrando {
   animation: menguar var(--veloz) var(--entra) forwards;
 }
 
-.capitulos--cerrando {
+.capitulos.capitulos--cerrando {
   animation: salir-izquierda var(--normal) var(--entra) forwards;
 }
 
-.previa--cerrando {
+.previa.previa--cerrando {
   animation: desvanecer var(--veloz) var(--entra) forwards;
 }
 
-.menu__lista--cerrando {
+.menu__lista.menu__lista--cerrando {
   animation: menguar var(--veloz) var(--entra) forwards;
 }
 
@@ -296,14 +323,15 @@
   }
 }
 
-.paleta__ramo--cerrando {
+.paleta__ramo.paleta__ramo--cerrando {
   animation: recoger var(--normal) var(--entra) forwards;
+  transform-origin: right center;
 }
 
-.aviso--cerrando {
+.aviso.aviso--cerrando {
   animation: hundir var(--veloz) var(--entra) forwards;
 }
 
-.pantalla--cerrando {
+.pantalla.pantalla--cerrando {
   animation: desvanecer var(--veloz) var(--entra) forwards;
 }

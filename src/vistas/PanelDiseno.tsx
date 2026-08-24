@@ -21,6 +21,7 @@
 
 import { useRef, useState, type ChangeEvent } from "react";
 import { useSalida } from "@/ui/useSalida";
+import { contarPalabras } from "@/nucleo/bloques";
 import { FUENTES, GRUPOS_FUENTE, pilaDe } from "@/nucleo/fuentes";
 import { FORMATOS, MARGENES, juzgarMedida, medidaEnCaracteres } from "@/nucleo/geometria";
 import type { Diseno, Meta, Portada as TipoPortada } from "@/nucleo/libro";
@@ -28,7 +29,8 @@ import { RECETAS } from "@/nucleo/recetas";
 import { avisar } from "@/ui/Avisos";
 import { Icono } from "@/ui/Icono";
 import { MiniPagina } from "./MiniPagina";
-import { Portada, prepararImagen } from "./Portada";
+import { prepararImagen } from "./Portada";
+import { Elementos, LienzoPortada, Material, Plantillas } from "./PortadaTaller";
 
 type Pestana = "estilo" | "letra" | "pagina" | "portada";
 
@@ -67,6 +69,11 @@ export function PanelDiseno({
     onCambiar({ ...meta, portada: { ...meta.portada, ...cambios } });
   };
 
+  /* Cuál de las cosas puestas a mano se está tocando. Vive aquí y no dentro del
+     editor porque lo comparten dos: la portada grande, donde se arrastra, y la
+     lista de capas de abajo. */
+  const [elegido, setElegido] = useState<string | null>(null);
+
   return (
     <>
       {/* On a phone the panel is the whole screen. It used to be 88 % of it,
@@ -99,7 +106,18 @@ export function PanelDiseno({
         <div className="panel__muestra">
           {pestana === "portada" ? (
             <div className="panel__portada">
-              <Portada meta={meta} tamano="mini" />
+              <LienzoPortada
+                meta={meta}
+                elegido={elegido}
+                onElegir={setElegido}
+                onMover={(id, x, y) =>
+                  cambiarPortada({
+                    elementos: (meta.portada.elementos ?? []).map((elemento) =>
+                      elemento.id === id ? { ...elemento, x, y } : elemento,
+                    ),
+                  })
+                }
+              />
             </div>
           ) : (
             <MiniPagina meta={meta} cuerpo={cuerpo} alto={168} />
@@ -128,7 +146,14 @@ export function PanelDiseno({
           {pestana === "letra" && <Letra diseno={meta.diseno} onCambiar={cambiarDiseno} />}
           {pestana === "pagina" && <Pagina diseno={meta.diseno} onCambiar={cambiarDiseno} />}
           {pestana === "portada" && (
-            <PortadaAjustes meta={meta} onCambiar={onCambiar} onCambiarPortada={cambiarPortada} />
+            <PortadaAjustes
+              meta={meta}
+              cuerpo={cuerpo}
+              elegido={elegido}
+              onElegir={setElegido}
+              onCambiar={onCambiar}
+              onCambiarPortada={cambiarPortada}
+            />
           )}
         </div>
       </aside>
@@ -747,10 +772,17 @@ const ESTILOS_PORTADA: [TipoPortada["diseno"], string, string][] = [
 
 function PortadaAjustes({
   meta,
+  cuerpo,
+  elegido,
+  onElegir,
   onCambiar,
   onCambiarPortada,
 }: {
   meta: Meta;
+  /** Solo para contar palabras: la recomendación mira lo largo que va el libro. */
+  cuerpo: string;
+  elegido: string | null;
+  onElegir: (id: string | null) => void;
   onCambiar: (meta: Meta) => void;
   onCambiarPortada: (cambios: Partial<TipoPortada>) => void;
 }) {
@@ -772,6 +804,21 @@ function PortadaAjustes({
 
   return (
     <>
+      <Plantillas
+        meta={meta}
+        palabras={contarPalabras(cuerpo)}
+        onAplicar={(portada) => onCambiar({ ...meta, portada })}
+      />
+
+      <Elementos
+        portada={portada}
+        elegido={elegido}
+        onElegir={onElegir}
+        onCambiar={(elementos) => onCambiarPortada({ elementos })}
+      />
+
+      <Material portada={portada} onCambiar={onCambiarPortada} />
+
       <div className="grupo">
         <span className="grupo__titulo">Estilo</span>
         <div className="opciones">

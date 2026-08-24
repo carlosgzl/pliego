@@ -91,6 +91,70 @@ export interface Portada {
   fuenteTitulo?: string;
   fuenteSub?: string;
   fuenteAutor?: string;
+  /**
+   * La textura del material sobre el que va impresa.
+   *
+   * Una portada de un solo color plano se lee como una diapositiva; el papel de
+   * verdad tiene grano, la tela tiene trama y el cartón tiene fibra, y es eso
+   * lo que hace que un objeto parezca un objeto. Se dibujan con degradados de
+   * CSS, no con imágenes: así la portada no engorda ni un byte el archivo del
+   * libro, y el libro sigue siendo un `.md` que se abre en cualquier parte.
+   *
+   * Ausente significa «ninguna», que es como se veían todas antes.
+   */
+  textura?: string;
+  /**
+   * Lo que se ha puesto a mano encima: textos e imágenes, donde se quiera.
+   *
+   * Las tres líneas de siempre —título, subtítulo, autor— siguen siendo suyas y
+   * no están aquí. Esto es lo de más: un sello, una filacteria, una franja
+   * lateral con una foto, una firma en una esquina. Cada uno lleva su posición
+   * en PORCENTAJE de la portada, no en píxeles, que es lo que permite que la
+   * misma portada valga para la miniatura de la estantería y para el PDF.
+   *
+   * Ausente o vacío significa una portada como las de antes.
+   */
+  elementos?: ElementoPortada[];
+}
+
+/**
+ * Una cosa puesta a mano sobre la portada.
+ *
+ * TODO EN PORCENTAJES Y EN `em`, nunca en píxeles. La portada se dibuja a un
+ * tamaño en la estantería, a otro en el panel de diseño y a otro más en el PDF;
+ * cualquier medida absoluta se descolocaría en dos de los tres. Con `x`, `y` y
+ * `ancho` en porcentaje y el cuerpo en `em`, el mismo objeto se compone igual a
+ * cualquier escala.
+ */
+export interface ElementoPortada {
+  id: string;
+  tipo: "texto" | "imagen";
+  /** El texto que se lee, o el data URI de la imagen. */
+  contenido: string;
+  /** Dónde está su CENTRO, en % del ancho y del alto de la portada. */
+  x: number;
+  y: number;
+  /** Lo que ocupa de ancho, en % de la portada. */
+  ancho: number;
+  /** Cuerpo de letra en em. Solo para el texto. */
+  tamano?: number;
+  /** Una clave de FUENTES. Vacío: la letra general de la portada. */
+  fuente?: string;
+  /** Vacío: la tinta de la portada. */
+  color?: string;
+  /** Grados. Una faja o un sello torcido a propósito es medio diseño. */
+  giro?: number;
+  /** De 0 a 1. Una marca de agua es una imagen al 12 %. */
+  opacidad?: number;
+  peso?: number;
+  versalitas?: boolean;
+  alineacion?: "izquierda" | "centro" | "derecha";
+  /** Interlineado, para los textos de varias líneas. */
+  interlineado?: number;
+  /** Espaciado entre letras en em: lo que convierte un rótulo en un rótulo. */
+  tracking?: number;
+  /** Redondez de una imagen, en % — 50 la deja circular. */
+  redondez?: number;
 }
 
 export interface Meta {

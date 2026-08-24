@@ -97,6 +97,25 @@ derivación de un solo sentido que no sirve para descifrar nada.
 > `netlify/functions/auth.mjs`, para que el almacén de la cuenta converja aunque
 > dos dispositivos escriban a la vez. Si cambia `fusion.ts`, cambia allí.
 
+## La portada
+
+Se diseña encima de la portada de verdad — el mismo componente que pinta la
+miniatura de la estantería y el PDF—, así que lo que se coloca aquí está
+colocado ahí.
+
+- **Ocho plantillas** completas (estilo, colores, letras y material), y una
+  **recomendada para este libro** con el motivo escrito: la sugerencia sale de
+  leer las decisiones que ya se han tomado sobre el interior —tamaño de página,
+  letra, si hay subtítulo, cómo se separan las escenas—, no de adivinar.
+- **Texturas** de tapa: lino, verjurado, tela, cartón, veta y grano. Todas
+  dibujadas con degradados de CSS y un `feTurbulence`; **ninguna es una imagen**,
+  porque la portada viaja dentro del `.md` y un escaneo de tela serían cientos
+  de kB metidos en un archivo que tiene que abrirse en Obsidian.
+- **Cosas puestas a mano**: textos e imágenes donde se quiera, arrastrando o con
+  una rejilla de nueve sitios. Todo en **porcentaje y en `em`** — nunca en
+  píxeles— que es lo que hace que el mismo objeto caiga en el mismo sitio a los
+  tres tamaños a los que se dibuja una portada.
+
 ## Escribir a gusto
 
 Lo que hace que apetezca escribir aquí, y por qué cada cosa está como está:

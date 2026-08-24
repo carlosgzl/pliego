@@ -22,6 +22,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Ayuda } from "@/ui/Ayuda";
+import { useSalida } from "@/ui/useSalida";
 import { Icono, type NombreIcono } from "@/ui/Icono";
 
 export interface Accion {
@@ -49,6 +50,10 @@ export function MenuBarra({
 }) {
   const [abierto, setAbierto] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
+  /* El menú se queda montado mientras se recoge, o se cerraría en un fotograma
+     después de haberse abierto con calma — que es la mitad brusca que se
+     recuerda. Ver `ui/useSalida.ts`. */
+  const salida = useSalida(abierto, () => setAbierto(false));
 
   /* Cerrar al pinchar fuera y al pulsar Escape. Sin esto un menú abierto se
      queda abierto mientras escribes, tapando la primera línea. */
@@ -58,12 +63,12 @@ export function MenuBarra({
     }
     const fuera = (evento: PointerEvent) => {
       if (!caja.current?.contains(evento.target as Node)) {
-        setAbierto(false);
+        salida.cerrar();
       }
     };
     const escape = (evento: KeyboardEvent) => {
       if (evento.key === "Escape") {
-        setAbierto(false);
+        salida.cerrar();
       }
     };
     document.addEventListener("pointerdown", fuera);
@@ -72,7 +77,7 @@ export function MenuBarra({
       document.removeEventListener("pointerdown", fuera);
       document.removeEventListener("keydown", escape);
     };
-  }, [abierto]);
+  }, [abierto, salida]);
 
   return (
     <div className="menu" ref={caja}>
@@ -81,7 +86,7 @@ export function MenuBarra({
         className="boton boton--desnudo menu__tirador"
         aria-expanded={abierto}
         aria-haspopup="menu"
-        onClick={() => setAbierto((previo) => !previo)}
+        onClick={() => (abierto ? salida.cerrar() : setAbierto(true))}
       >
         <Icono nombre={icono} />
         <span className="menu__etiqueta">{etiqueta}</span>
@@ -90,8 +95,12 @@ export function MenuBarra({
         </span>
       </button>
 
-      {abierto && (
-        <div className="menu__lista" role="menu">
+      {salida.montado && (
+        <div
+          className={`menu__lista${salida.cerrando ? " menu__lista--cerrando" : ""}`}
+          role="menu"
+          onAnimationEnd={salida.alTerminar}
+        >
           {acciones.map((accion) => {
             const boton = (
               <button
@@ -100,7 +109,7 @@ export function MenuBarra({
                 className={`menu__opcion${accion.puesto ? " menu__opcion--puesta" : ""}`}
                 onClick={() => {
                   accion.hacer();
-                  setAbierto(false);
+                  salida.cerrar();
                 }}
               >
                 <Icono nombre={accion.icono} tamano={15} />
