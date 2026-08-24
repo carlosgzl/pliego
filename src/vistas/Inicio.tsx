@@ -8,15 +8,15 @@
  * debajo, y empezar un libro nuevo es un botón, no la acción principal, porque
  * se hace tres veces al año.
  *
- * Las cifras de arriba son de la biblioteca entera, no de un libro: cuánto has
- * escrito en total, cuánto hoy y cuántas obras hay. Es lo que se mira al llegar
- * y lo que no se puede ver desde dentro del taller.
+ * ARRIBA HUBO CUATRO CIFRAS EN CAJAS y ya no están. Un panel de control es lo
+ * que pone una aplicación cuando no sabe qué decirte, y un escritor no abre
+ * esto para consultar métricas: abre para seguir escribiendo. Queda una línea
+ * al lado del saludo, con lo mismo dicho como lo diría una persona.
  */
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import type { Catalogo, LibroResumen } from "@/datos/biblioteca";
 import { palabrasDeHoy } from "@/datos/ajustes";
-import { minutosDeLectura } from "@/nucleo/bloques";
 import { DialogoConfirmar, DialogoTexto } from "@/ui/Dialogo";
 import { Icono } from "@/ui/Icono";
 import { Pie } from "@/ui/Pie";
@@ -59,6 +59,7 @@ export function Inicio({
   const hoy = libros.reduce((suma, libro) => suma + palabrasDeHoy(libro.slug, libro.palabras), 0);
   const ultimo = libros[0] ?? null;
   const resto = libros.slice(1);
+  const resumen = () => frase(libros.length, palabras, hoy);
 
   return (
     <div className="inicio pantalla">
@@ -72,14 +73,25 @@ export function Inicio({
               <span className="marca__beta">beta</span>
             </div>
             {/*
-              * El saludo, EN SU PROPIA LÍNEA Y EN MINÚSCULA.
+              * El saludo va en su propia línea y en minúscula: pegado a la
+              * insignia de «beta» y en versalitas como ella, las dos se leían de
+              * corrido —«BETA DE MADRUGADA»— y no lo entendía nadie.
               *
-              * Iba pegado a la insignia de «beta» y en versalitas como ella, así
-              * que las dos se leían de corrido: «BETA DE MADRUGADA». Nadie
-              * entiende eso, y con razón — no era una etiqueta de la aplicación,
-              * era un saludo. Abajo, en tono de frase, ya se lee como lo que es.
+              * EL RESUMEN, EN UNA FRASE Y NO EN CUATRO CAJAS.
+              *
+              * Había cuatro recuadros con cifras grandes —palabras, hoy, libros,
+              * tiempo de lectura— y no convencían: un panel de control es lo que
+              * pone una aplicación cuando no sabe qué decirte. Un escritor no
+              * abre esto para consultar métricas; abre para seguir escribiendo.
+              *
+              * Así que queda UNA línea, en el tono en que lo diría una persona,
+              * y solo cuando hay algo que contar. Lo de hoy únicamente si has
+              * escrito hoy: un «+0» todos los días desanima, y no informa.
               */}
-            <p className="inicio__saludo">{saludo()}</p>
+            <p className="inicio__saludo">
+              {saludo()}
+              {dentro && libros.length > 0 && <span className="inicio__dato">{resumen()}</span>}
+            </p>
           </div>
 
           <div className="inicio__acciones">
@@ -108,40 +120,6 @@ export function Inicio({
             </button>{" "}
             para abrir el tuyo.
           </p>
-        )}
-
-        {dentro && libros.length > 0 && (
-          /*
-           * LAS CIFRAS, CON NOMBRE Y APELLIDOS.
-           *
-           * Decían «hoy», «obra» y «de lectura», y así no se entendía ninguna:
-           * ¿hoy qué? ¿una obra de qué? ¿de lectura de quién? Cada una lleva
-           * ahora una etiqueta que se lee entera —«escritas hoy», «libros en la
-           * estantería»— y detrás, al pasar por encima, la frase completa.
-           */
-          <div className="cifras">
-            <Cifra
-              valor={palabras.toLocaleString("es-ES")}
-              nombre="palabras en total"
-              explica="Todo lo que llevas escrito, sumando los libros de la estantería."
-            />
-            <Cifra
-              valor={`${hoy > 0 ? "+" : ""}${hoy.toLocaleString("es-ES")}`}
-              nombre="escritas hoy"
-              apagada={hoy === 0}
-              explica="Cuántas has sumado desde esta mañana. Baja si cortas, porque cortar trescientas palabras no es escribir trescientas palabras."
-            />
-            <Cifra
-              valor={String(libros.length)}
-              nombre={libros.length === 1 ? "libro empezado" : "libros empezados"}
-              explica="Cuántas obras hay en tu estantería."
-            />
-            <Cifra
-              valor={tiempoDeLectura(minutosDeLectura(palabras))}
-              nombre="se tarda en leerlo"
-              explica="Lo que tardaría alguien en leerse todo lo que llevas escrito, a ritmo normal."
-            />
-          </div>
         )}
 
         {/* Seguir donde lo dejaste: lo más grande de la pantalla. */}
@@ -190,7 +168,27 @@ export function Inicio({
             )}
           </div>
 
-          {cargando && <p className="campo__nota">Buscando tus libros…</p>}
+          {/*
+            * MIENTRAS SE BUSCA, LA FORMA DE LO QUE VA A LLEGAR.
+            *
+            * Había una línea de texto —«Buscando tus libros…»— que aparecía y
+            * desaparecía de golpe, y al desaparecer la estantería daba un salto
+            * porque lo que entraba medía otra cosa. Un esqueleto ocupa
+            * exactamente el sitio de las portadas que vienen: la página no se
+            * mueve, solo se rellena. Y late despacio, que es la diferencia
+            * entre «está cargando» y «se ha quedado colgado».
+            */}
+          {cargando && libros.length === 0 && (
+            <div className="rejilla esqueleto" aria-hidden="true">
+              {[0, 1, 2, 3, 4, 5].map((n) => (
+                <div className="hueso" key={n} style={{ "--indice": n } as CSSProperties}>
+                  <div className="hueso__portada" />
+                  <div className="hueso__linea" />
+                  <div className="hueso__linea hueso__linea--corta" />
+                </div>
+              ))}
+            </div>
+          )}
 
           {!cargando && dentro && libros.length === 0 && (
             <div className="vacio">
@@ -297,14 +295,24 @@ function saludo(): string {
   return quien ? `${momento}, ${quien.charAt(0).toUpperCase()}${quien.slice(1)}.` : `${momento}.`;
 }
 
-/** Los minutos de lectura dichos como los diría alguien: «1 h 37 min». */
-function tiempoDeLectura(minutos: number): string {
-  if (minutos < 60) {
-    return `${minutos} min`;
+/**
+ * El resumen de la biblioteca, dicho como lo diría alguien.
+ *
+ * Nada de «4 obras · 24.310 palabras · 1 h 37 min de lectura», que es una ficha
+ * técnica. Una frase, con lo de hoy solo si hoy hay algo — y sin adjetivos de
+ * ánimo, que a la tercera vez suenan a palmadita en la espalda.
+ */
+function frase(libros: number, palabras: number, hoy: number): string {
+  const obra = libros === 1 ? "un libro" : `${libros} libros`;
+  const total = palabras.toLocaleString("es-ES");
+  const base =
+    palabras === 0
+      ? `Tienes ${obra} empezado${libros === 1 ? "" : "s"}.`
+      : `Llevas ${total} palabras en ${obra}.`;
+  if (hoy > 0) {
+    return `${base} Hoy, ${hoy.toLocaleString("es-ES")}.`;
   }
-  const horas = Math.floor(minutos / 60);
-  const resto = minutos % 60;
-  return resto === 0 ? `${horas} h` : `${horas} h ${resto} min`;
+  return base;
 }
 
 /** «hoy», «ayer» o la fecha: lo que diría una persona. */
@@ -321,26 +329,6 @@ function cuando(iso: string): string {
     return `hace ${dias} días`;
   }
   return fecha.toLocaleDateString("es-ES", { day: "numeric", month: "long" });
-}
-
-function Cifra({
-  valor,
-  nombre,
-  apagada,
-  explica,
-}: {
-  valor: string;
-  nombre: string;
-  apagada?: boolean;
-  /** La frase entera, para quien se quede encima con el ratón. */
-  explica?: string;
-}) {
-  return (
-    <div className={`cifra${apagada ? " cifra--apagada" : ""}`} title={explica}>
-      <span className="cifra__valor">{valor}</span>
-      <span className="cifra__nombre">{nombre}</span>
-    </div>
-  );
 }
 
 function Obra({

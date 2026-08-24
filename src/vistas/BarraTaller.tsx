@@ -20,7 +20,7 @@
  * entienda.
  */
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Ayuda } from "@/ui/Ayuda";
 import { useSalida } from "@/ui/useSalida";
 import { Icono, type NombreIcono } from "@/ui/Icono";
@@ -36,6 +36,15 @@ export interface Accion {
   puesto?: boolean;
   /** Una raya de separación ANTES de esta acción, para agrupar por familias. */
   corte?: boolean;
+  /**
+   * Estilo para el nombre de la acción.
+   *
+   * Existe por una sola cosa, y es buena: que cada tipografía del menú «Letra»
+   * se lea CON SU PROPIA LETRA. Una lista de nombres de fuentes todos escritos
+   * en la misma es una lista de palabras; escrito cada uno con la suya, es una
+   * muestra — se elige mirando, no leyendo.
+   */
+  estilo?: CSSProperties;
   hacer: () => void;
 }
 
@@ -113,7 +122,9 @@ export function MenuBarra({
                 }}
               >
                 <Icono nombre={accion.icono} tamano={15} />
-                <span className="menu__nombre">{accion.nombre}</span>
+                <span className="menu__nombre" style={accion.estilo}>
+                  {accion.nombre}
+                </span>
                 {accion.atajo && <kbd className="menu__atajo">{accion.atajo}</kbd>}
                 {accion.puesto && (
                   <span className="menu__marca">

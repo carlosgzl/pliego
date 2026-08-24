@@ -132,10 +132,16 @@ export function SelectorColor({
                * literalmente lo que él describió.
                */
               style={{ background: oscuro ? acento.oscuro.acento : acento.claro.acento }}
-              onClick={() => {
-                onCambiar(acento.clave);
-                salida.cerrar();
-              }}
+              /*
+               * ELEGIR UN COLOR NO CIERRA LA PALETA.
+               *
+               * Cerraba al primer clic, y eso obliga a volver a abrirla para
+               * ver el siguiente: probar los ocho eran dieciséis gestos. Un
+               * color se elige COMPARANDO, y comparar es pulsar uno, mirar la
+               * pantalla, pulsar otro. La paleta se va cuando apartas el ratón,
+               * que es cuando de verdad has terminado.
+               */
+              onClick={() => onCambiar(acento.clave)}
             />
           ))}
         </div>
@@ -175,12 +181,15 @@ export function Pie() {
             </span>
             <span className="pie__beta">Beta</span>
           </div>
-
-          <p className="pie__que">
-            Un sitio para escribir libros. Cada obra es un archivo Markdown que se abre en cualquier
-            editor: nada de lo que escribas depende de esta web.
-          </p>
         </div>
+
+        {/* Fuera de la columna a propósito: en un teléfono el pie es una fila
+            —marca a la izquierda, firma a la derecha— y este párrafo tiene que
+            poder saltar solo a la línea de abajo. */}
+        <p className="pie__que">
+          Un sitio para escribir libros. Cada obra es un archivo Markdown que se abre en cualquier
+          editor: nada de lo que escribas depende de esta web.
+        </p>
 
         <div className="pie__autoria">
           <a

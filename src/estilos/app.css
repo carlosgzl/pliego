@@ -193,6 +193,50 @@
   color: var(--tenue);
 }
 
+/* ── El esqueleto de la estantería ────────────────────────────────────────── */
+
+/*
+ * La forma de lo que está por llegar.
+ *
+ * Cada hueso ocupa el sitio exacto de una portada y su rótulo, así que cuando
+ * llegan los libros la página NO SE MUEVE: se rellena. La alternativa —una
+ * línea de «cargando…»— hace que todo dé un salto al desaparecer, porque lo que
+ * entra mide otra cosa.
+ *
+ * El latido es lento a propósito (1,6 s). Un parpadeo rápido dice «error»; una
+ * respiración dice «voy». Y cada hueso empieza un pelín después que el
+ * anterior, igual que las portadas de verdad.
+ */
+.esqueleto {
+  animation: asomar var(--normal) var(--sale);
+}
+
+.hueso {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  animation: latir 1.6s ease-in-out infinite;
+  animation-delay: calc(var(--indice, 0) * 90ms);
+}
+
+.hueso__portada {
+  aspect-ratio: 2 / 3;
+  border-radius: 2px;
+  background: var(--panel);
+  border: 1px solid var(--linea);
+}
+
+.hueso__linea {
+  height: 0.62rem;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--linea);
+}
+
+.hueso__linea--corta {
+  width: 45%;
+}
+
 .vacio {
   display: flex;
   flex-direction: column;
@@ -284,11 +328,31 @@
   min-height: 3.1rem;
 }
 
+/*
+ * LOS TRES BLOQUES DE LA BARRA, Y POR QUÉ EL TÍTULO SALÍA DESCENTRADO.
+ *
+ * Los grupos de los lados llevaban `flex: none` y el centro `flex: 1`, así que
+ * el título quedaba centrado DENTRO DEL HUECO QUE SOBRABA, no dentro de la
+ * barra. Y como a la izquierda hay dos botones y a la derecha seis, el hueco
+ * empieza mucho más a la derecha: el título se iba hacia allí. Se veía torcido
+ * porque lo estaba.
+ *
+ * El truco de las tres columnas: los dos lados con `flex: 1 1 0` —la misma
+ * porción de espacio, sea cual sea su contenido— y el centro con lo que ocupe.
+ * Con los dos lados midiendo igual, el centro cae en el centro exacto.
+ */
 .barra__grupo {
   display: flex;
   align-items: center;
   gap: 0.15rem;
-  flex: none;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* El de la derecha empuja su contenido contra el borde; el de la izquierda se
+   queda donde está. */
+.barra__grupo:last-of-type {
+  justify-content: flex-end;
 }
 
 .barra__libro {
@@ -296,8 +360,9 @@
   flex-direction: column;
   align-items: center;
   gap: 0.1rem;
-  flex: 1;
+  flex: 0 1 auto;
   min-width: 0;
+  max-width: 40%;
   text-align: center;
 }
 
@@ -2053,9 +2118,20 @@
  * la versión.
  */
 .inicio__saludo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
   margin: 0;
   font-size: 0.85rem;
   color: var(--tenue);
+}
+
+/* El resumen de la biblioteca, separado del saludo por una raya fina en vez de
+   por un punto: un punto entre dos frases se lee como puntuación rota. */
+.inicio__dato {
+  padding-inline-start: 0.5rem;
+  border-inline-start: 1px solid var(--linea-fuerte);
 }
 
 .inicio__acciones {
@@ -2102,44 +2178,6 @@
   color: var(--acento-ink);
   text-decoration: underline;
   text-underline-offset: 2px;
-}
-
-/* Las cifras de la biblioteca entera. */
-.cifras {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
-  gap: 1px;
-  background: var(--linea);
-  border: 1px solid var(--linea);
-  border-radius: var(--radio-grande);
-  overflow: hidden;
-}
-
-.cifra {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  padding: 0.9rem 1rem;
-  background: var(--panel);
-}
-
-.cifra__valor {
-  font-size: 1.35rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-}
-
-.cifra--apagada .cifra__valor {
-  color: var(--tenue);
-}
-
-.cifra__nombre {
-  line-height: 1.35;
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--tenue);
 }
 
 /* Seguir donde lo dejaste. */
@@ -2337,7 +2375,13 @@
   flex-direction: column;
   gap: 0.7rem;
   min-width: 0;
-  flex: 1 1 22rem;
+  flex: none;
+}
+
+/* En escritorio el pie es una fila de tres: marca, texto y firma. El texto se
+   queda con el hueco que sobra, que es lo que sujeta los dos extremos. */
+.pie__que {
+  flex: 1 1 20rem;
 }
 
 .pie__marca {
@@ -2424,14 +2468,51 @@
  * texto a la izquierda, parecía un adorno suelto en la esquina.
  */
 @media (max-width: 760px) {
+  /*
+   * EL PIE OCUPABA 515 PX DE UNA PANTALLA DE 812. Dos tercios del teléfono para
+   * un pie de página.
+   *
+   * La causa era `flex: 1 1 22rem` en la columna de texto. En el escritorio el
+   * pie es una FILA y ese 22rem es un ancho mínimo razonable; en el móvil pasa
+   * a ser una COLUMNA, y entonces `flex-basis` deja de medir el ancho y mide el
+   * ALTO: trescientos cincuenta píxeles de nada reservados a la fuerza. Es la
+   * misma trampa que ya apareció en la estantería — `flex-basis` cambia de eje
+   * con la dirección, y a nadie se le ocurre repasarlo cuando escribe la
+   * consulta de medios.
+   *
+   * De paso, el pie de un teléfono no necesita ser una portada: la marca y la
+   * firma comparten fila, la firma baja de 62 a 38 px y el párrafo va debajo,
+   * pequeño. Unos ciento treinta píxeles en total.
+   */
   .pie__dentro {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1.5rem;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+    padding: 1.4rem 1rem 1.6rem;
+  }
+
+  .pie__columna {
+    flex: 1 1 auto;
+    gap: 0;
   }
 
   .pie__autoria {
-    align-items: flex-start;
+    flex: none;
+    align-items: flex-end;
+  }
+
+  .pie__firmante svg {
+    height: 38px;
+    width: auto;
+  }
+
+  /* El párrafo salta a su propia línea, debajo de los dos. */
+  .pie__que {
+    order: 3;
+    flex-basis: 100%;
+    font-size: 0.76rem;
+    line-height: 1.5;
   }
 }
 

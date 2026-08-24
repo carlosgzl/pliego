@@ -99,6 +99,7 @@ export function Taller({
   ajustes,
   onAjustes,
   onSalir,
+  onTitulo,
   onEntrar,
 }: {
   slug: string;
@@ -107,6 +108,8 @@ export function Taller({
   ajustes: Ajustes;
   onAjustes: (ajustes: Ajustes) => void;
   onSalir: () => void;
+  /** Cómo se llama esto, para que la pestaña del navegador lo diga. */
+  onTitulo: (titulo: string | null) => void;
   onEntrar: () => void;
 }) {
   const [meta, setMeta] = useState<Meta | null>(null);
@@ -178,11 +181,12 @@ export function Taller({
         avisar("Recuperado lo último que escribiste: no había llegado a guardarse.");
       }
       marcarArranque(slug, contarPalabras(partido.cuerpo));
+      onTitulo(partido.meta.titulo);
     })();
     return () => {
       vivo = false;
     };
-  }, [slug, demo, onSalir]);
+  }, [slug, demo, onSalir, onTitulo]);
 
   /* ── Derivados ───────────────────────────────────────────────────────────── */
 
@@ -965,6 +969,9 @@ export function Taller({
       nombre: fuente.name,
       icono: "cursiva" as const,
       ayuda: fuente.hint,
+      /* Cada nombre, escrito con su propia letra: así se elige mirando en vez
+         de leyendo, igual que en Diseño › Letra. */
+      estilo: { fontFamily: fuente.stack, fontSize: "0.95rem" },
       puesto: ajustes.fuenteEditor === fuente.key,
       hacer: () => onAjustes({ ...ajustes, fuenteEditor: fuente.key }),
     })),
@@ -1240,6 +1247,7 @@ export function Taller({
             onCambiar={(siguiente) => {
               setMeta(siguiente);
               setEstado("escribiendo");
+              onTitulo(siguiente.titulo);
             }}
             onCerrar={() => setPanel("ninguno")}
           />

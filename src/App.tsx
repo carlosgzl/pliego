@@ -44,6 +44,8 @@ function libroDeLaUrl(): string | null {
 export function App() {
   const [ajustes, setAjustes] = useState<Ajustes>(leerAjustes);
   const [abierto, setAbierto] = useState<string | null>(libroDeLaUrl);
+  /** El título del libro abierto, para la pestaña. Lo dice el taller. */
+  const [tituloPestana, setTituloPestana] = useState<string | null>(null);
   const [catalogo, setCatalogo] = useState<Catalogo | null>(null);
   const [cargando, setCargando] = useState(true);
   const [ajustando, setAjustando] = useState(false);
@@ -93,6 +95,18 @@ export function App() {
     setAjustes(siguiente);
     guardarAjustes(siguiente);
   }, []);
+
+  /*
+   * EL NOMBRE DE LA PESTAÑA ES EL DEL LIBRO ABIERTO.
+   *
+   * Decía «Pliego — escribir libros» siempre, que es un eslogan: se lee una vez
+   * y luego es ruido en una pestaña de dos centímetros. Con seis pestañas
+   * abiertas, lo único que hace falta saber es CUÁL de ellas es la novela — así
+   * que en la estantería pone «Pliego» y dentro de un libro pone el libro.
+   */
+  useEffect(() => {
+    document.title = tituloPestana ?? "Pliego";
+  }, [tituloPestana]);
 
   /* ── Session ─────────────────────────────────────────────────────────────── */
 
@@ -195,6 +209,7 @@ export function App() {
 
   const salirDelTaller = useCallback(() => {
     abrir(null);
+    setTituloPestana(null);
     void recargar();
   }, [abrir, recargar]);
 
@@ -264,8 +279,10 @@ export function App() {
           ajustes={ajustes}
           onAjustes={cambiarAjustes}
           onSalir={salirDelTaller}
+          onTitulo={setTituloPestana}
           onEntrar={() => {
             abrir(null);
+            setTituloPestana(null);
             setVisita(false);
           }}
         />
