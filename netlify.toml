@@ -8,6 +8,18 @@
 [build.environment]
   NODE_VERSION = "20"
 
+# La API va ANTES del comodín del SPA.
+#
+# Sin esta regla, cualquier ruta de función que no case exactamente con su
+# patrón se la lleva el `/*` de abajo y contesta con la página web —un HTML
+# donde se esperaba JSON, que es de los errores más desconcertantes que hay
+# porque el código de estado sigue siendo 200. Ya pasó con `/api/plaza`.
+[[redirects]]
+  from = "/api/*"
+  to = "/api/:splat"
+  status = 200
+  force = false
+
 # A single-page app: every path has to reach index.html, or a reload on
 # /#/Mi-libro would 404.
 [[redirects]]

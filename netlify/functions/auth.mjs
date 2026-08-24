@@ -45,7 +45,15 @@ import {
  * empaquetador de Netlify se deja cosas fuera y la función revienta con un
  * error sin traza. Un archivo que se basta a sí mismo no puede fallar así.
  */
-export const config = { path: ["/api/auth/*", "/api/plaza/*"] };
+/*
+ * `/api/plaza` VA APARTE DE `/api/plaza/*`, y no sobra.
+ *
+ * El comodín de Netlify exige que haya algo detrás de la barra, así que el
+ * escaparate —que se pide a pelo, sin ruta detrás— no lo cogía la función: se
+ * lo llevaba el `/* → /index.html` del SPA y la respuesta era la página web en
+ * lugar de la lista. Comprobado contra el sitio desplegado.
+ */
+export const config = { path: ["/api/auth/*", "/api/plaza", "/api/plaza/*"] };
 
 const DIAS = 30;
 const SCRYPT = { N: 16384, r: 8, p: 1, largo: 32 };
