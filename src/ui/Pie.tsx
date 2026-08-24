@@ -24,6 +24,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { DOCUMENTOS } from "@/vistas/Legal";
 import { ACENTOS } from "./acento";
 import { Firma } from "./Firma";
 import { useSalida } from "./useSalida";
@@ -170,28 +171,72 @@ export function SelectorColor({
   );
 }
 
-export function Pie() {
+/**
+ * El pie.
+ *
+ * ESTABA DESCUADRADO Y ERA LITERAL. Los tres bloques —marca, párrafo y firma—
+ * iban en una fila con `align-items: flex-end`, o sea alineados POR ABAJO: como
+ * cada uno mide distinto (26, 42 y 62 px), sus líneas de texto caían a tres
+ * alturas diferentes. Medido en producción: 844, 828 y 808. Se veía torcido
+ * porque lo estaba.
+ *
+ * Ahora es una REJILLA DE COLUMNAS con una barra inferior, que es como está
+ * hecho el pie de cualquier sitio serio y como se resuelve el problema de raíz:
+ * las columnas arrancan todas arriba, a la misma altura, y lo que las cierra es
+ * una línea horizontal común. Ya nada depende de cuánto mide cada bloque.
+ *
+ * Y LLEVA LOS PAPELES. Una web que crea cuentas, guarda lo que escribe la gente
+ * y le deja publicarlo necesita condiciones, política de privacidad y aviso
+ * legal: en España, la LSSI y el RGPD no lo dejan a elección de nadie. Su sitio
+ * natural es el pie, y por eso el pie ha crecido.
+ */
+export function Pie({ onPlaza }: { onPlaza?: () => void }) {
+  const ano = new Date().getFullYear();
+
   return (
     <footer className="pie">
       <div className="pie__dentro">
-        <div className="pie__columna">
+        {/* La única columna con prosa, y por eso la más ancha de la rejilla. */}
+        <div className="pie__col pie__col--marca">
           <div className="pie__marca">
             <span className="pie__nombre">
               Pliego<span className="marca__punto">.</span>
             </span>
             <span className="pie__beta">Beta</span>
           </div>
+          <p className="pie__que">
+            Un sitio para escribir libros. Cada obra es un archivo Markdown que se abre en cualquier
+            editor: nada de lo que escribas depende de esta web.
+          </p>
         </div>
 
-        {/* Fuera de la columna a propósito: en un teléfono el pie es una fila
-            —marca a la izquierda, firma a la derecha— y este párrafo tiene que
-            poder saltar solo a la línea de abajo. */}
-        <p className="pie__que">
-          Un sitio para escribir libros. Cada obra es un archivo Markdown que se abre en cualquier
-          editor: nada de lo que escribas depende de esta web.
-        </p>
+        <nav className="pie__col" aria-label="La aplicación">
+          <h2 className="pie__titulo">La aplicación</h2>
+          {onPlaza ? (
+            <button type="button" className="pie__enlace" onClick={onPlaza}>
+              La plaza
+            </button>
+          ) : (
+            <a className="pie__enlace" href="#/plaza">
+              La plaza
+            </a>
+          )}
+          <a className="pie__enlace" href={PORTFOLIO} target="_blank" rel="noreferrer noopener">
+            Quién lo hace
+          </a>
+        </nav>
 
-        <div className="pie__autoria">
+        <nav className="pie__col" aria-label="Legal">
+          <h2 className="pie__titulo">Legal</h2>
+          {DOCUMENTOS.map((doc) => (
+            <a key={doc.clave} className="pie__enlace" href={`#/legal/${doc.clave}`}>
+              {doc.titulo}
+            </a>
+          ))}
+        </nav>
+
+        <div className="pie__col pie__col--firma">
+          <h2 className="pie__titulo">Firmado</h2>
           <a
             className="pie__firmante"
             href={PORTFOLIO}
@@ -199,8 +244,23 @@ export function Pie() {
             rel="noreferrer noopener"
             title="Carlos González Alcalde — ver su portfolio"
           >
-            <Firma alto={62} titulo="Carlos González Alcalde" />
+            <Firma alto={58} titulo="Carlos González Alcalde" />
           </a>
+        </div>
+      </div>
+
+      {/*
+        * La barra de abajo: lo que en cualquier sitio serio va bajo una línea.
+        * El copyright y una frase honrada sobre lo que NO se hace, que hoy es
+        * información más útil que la mayoría de las que se dan.
+        */}
+      <div className="pie__barra">
+        <div className="pie__barra-dentro">
+          <span>© {ano} Carlos González Alcalde</span>
+          <span className="pie__punto" aria-hidden="true">·</span>
+          <span>Sin cookies, sin analítica y sin anuncios</span>
+          <span className="pie__punto" aria-hidden="true">·</span>
+          <span>Hecho en España</span>
         </div>
       </div>
     </footer>

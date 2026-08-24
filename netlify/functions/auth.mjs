@@ -522,6 +522,44 @@ export default async function handler(request) {
     return json(sesionNueva(usuario));
   }
 
+  /* --- Borrarse del todo -------------------------------------------------- */
+  /*
+   * NO ES UN EXTRA: la política de privacidad promete el derecho de supresión
+   * del artículo 17 del RGPD, y una promesa que hay que pedir por correo y
+   * esperar a que alguien la atienda a mano no es un derecho, es un trámite.
+   * Aquí es inmediato y no hay periodo de gracia.
+   *
+   * PIDE LA CONTRASEÑA otra vez aunque haya sesión. Es la única acción sin
+   * vuelta atrás de toda la aplicación, y un testigo robado no puede bastar
+   * para borrarle a alguien todo lo que ha escrito.
+   */
+  if (ruta === "cuenta" && request.method === "DELETE") {
+    const datos = comprobar(tokenDe(request));
+    if (!datos) {
+      return json({ error: "Hay que entrar." }, 401);
+    }
+    const cuerpo = await request.json().catch(() => null);
+    const ficha = await leerBlob(`u/${datos.u}`);
+    if (!ficha || !iguales(derivar(String(cuerpo?.clave ?? ""), ficha.sal), ficha.hash)) {
+      return json({ error: "La contraseña no es correcta." }, 401);
+    }
+
+    /* Primero lo publicado —que es lo que ve el resto del mundo— y después lo
+       suyo. En ese orden: si algo fallara a medias, es preferible quedarse con
+       una cuenta sin obras que con obras huérfanas en la plaza. */
+    const escaparate = await leerEscaparate();
+    const mias = escaparate.filter((obra) => obra.usuario === datos.u);
+    for (const obra of mias) {
+      await borrarBlob(`plaza/o/${obra.id.replace(/\//g, "~")}`);
+    }
+    if (mias.length > 0) {
+      await escribirEscaparate(escaparate.filter((obra) => obra.usuario !== datos.u));
+    }
+    await borrarBlob(`d/${datos.u}`);
+    await borrarBlob(`u/${datos.u}`);
+    return json({ ok: true, obrasRetiradas: mias.length });
+  }
+
   /* --- Los datos de la cuenta: libros y ajustes --------------------------- */
   if (ruta === "datos") {
     const datos = comprobar(tokenDe(request));

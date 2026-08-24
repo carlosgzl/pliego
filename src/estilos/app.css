@@ -260,6 +260,36 @@
   color: var(--tenue);
 }
 
+/*
+ * El punto de estado.
+ *
+ * Vive dentro de un botón normal y corriente, no en un recuadro propio: la
+ * cabecera tenía tres pesos visuales distintos en cuatro centímetros —un chip
+ * con borde, dos botones desnudos y otro con borde— sin que la diferencia
+ * significara nada. Ahora lo único que distingue a este de sus vecinos es el
+ * color de un punto de siete píxeles, que es exactamente la cantidad de énfasis
+ * que merece un indicador de estado.
+ */
+.punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--tenue);
+}
+
+.punto--bien {
+  background: var(--bien);
+}
+
+.punto--nube {
+  background: var(--acento);
+}
+
+.punto--mal {
+  background: var(--peligro);
+}
+
 /* ── Where the books are coming from ──────────────────────────────────────── */
 
 .origen {
@@ -1685,6 +1715,35 @@
 
 /* ── Phone ────────────────────────────────────────────────────────────────── */
 
+/*
+ * El pie, plegándose.
+ *
+ * A 1000 px las tres columnas de enlaces ya no caben con la de prosa al lado:
+ * pasan a dos filas. En el móvil, la prosa ocupa el ancho entero y los enlaces
+ * van en dos columnas — una lista de enlaces a una sola columna hace un pie
+ * larguísimo, y el pie de un teléfono no puede ser media pantalla.
+ */
+@media (max-width: 62rem) {
+  .pie__dentro {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.75rem 2rem;
+  }
+
+  .pie__col--marca {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 30rem) {
+  .pie__dentro {
+    padding: 1.75rem 1rem 1.5rem;
+  }
+
+  .pie__barra-dentro {
+    padding: 0.75rem 1rem;
+  }
+}
+
 @media (max-width: 760px) {
   /*
    * The bar carries eleven controls, and on a phone they do not fit on one
@@ -2180,6 +2239,178 @@
   text-underline-offset: 2px;
 }
 
+/* ── Los papeles ──────────────────────────────────────────────────────────── */
+
+/*
+ * Un documento legal que se pueda leer.
+ *
+ * La mitad de las políticas de privacidad que hay por ahí son ilegibles, y no
+ * solo por lo que dicen: van en una columna de mil píxeles de ancho, a cuerpo
+ * de nota al pie y con los títulos del mismo tamaño que el texto. Aquí la
+ * medida es de lectura —unos setenta caracteres—, la jerarquía se ve, y las
+ * cuatro pestañas están siempre arriba porque quien entra en una suele querer
+ * mirar otra.
+ */
+.legal {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--ground);
+}
+
+.legal__dentro {
+  width: 100%;
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem 5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.legal__cabeza {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.legal__pestanas {
+  display: flex;
+  gap: 1px;
+  flex-wrap: wrap;
+}
+
+.legal__pestanas .pestana {
+  text-decoration: none;
+}
+
+.legal__texto {
+  font-size: 0.95rem;
+  line-height: 1.75;
+  color: var(--ink-suave);
+}
+
+.legal__texto h1 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+
+.legal__texto h2 {
+  margin: 2.25rem 0 0.6rem;
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.legal__texto p {
+  margin: 0 0 0.9rem;
+}
+
+/* La entradilla resume el documento entero en tres líneas. Quien no vaya a
+   leerse dos mil palabras se lleva al menos lo importante. */
+.legal__entradilla {
+  padding: 0.9rem 1rem;
+  border-inline-start: 3px solid var(--acento);
+  background: var(--panel);
+  border-radius: 0 var(--radio) var(--radio) 0;
+  font-size: 0.92rem;
+  color: var(--ink);
+}
+
+.legal__texto ul {
+  margin: 0 0 1rem;
+  padding-inline-start: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.legal__texto a {
+  color: var(--acento-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.legal__texto code {
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  background: var(--panel-alto);
+  border: 1px solid var(--linea);
+  font-family: var(--mono);
+  font-size: 0.85em;
+}
+
+/*
+ * La tabla de datos tratados.
+ *
+ * El RGPD no obliga a ponerla en tabla, pero «qué dato, para qué y con qué base
+ * legal» son tres columnas naturales, y en párrafo corrido hay que leerlo dos
+ * veces para cruzar la información. En el móvil se desplaza a lo ancho dentro
+ * de su propia caja en vez de romper la página.
+ */
+.legal__tabla {
+  display: block;
+  overflow-x: auto;
+  width: 100%;
+  margin: 0 0 1.2rem;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.legal__tabla th,
+.legal__tabla td {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--linea);
+  text-align: left;
+  vertical-align: top;
+  min-width: 9rem;
+}
+
+.legal__tabla th {
+  background: var(--panel-alto);
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.legal__fecha {
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--linea);
+  font-size: 0.78rem;
+  color: var(--tenue);
+}
+
+/* Los enlaces a los papeles desde Ajustes. */
+.legal__enlaces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+}
+
+.legal__enlaces a {
+  font-size: 0.78rem;
+  color: var(--acento-ink);
+  text-underline-offset: 2px;
+}
+
+/* El grupo de borrar la cuenta: se ve que es de los que no se tocan sin querer. */
+.grupo--peligro {
+  border: 1px solid var(--peligro);
+  border-radius: var(--radio);
+  padding: 0.9rem;
+  background: var(--peligro-tenue);
+}
+
+.grupo--peligro .grupo__titulo {
+  color: var(--peligro);
+}
+
 /* ── Adónde más se puede llevar un libro ──────────────────────────────────── */
 
 .sitios {
@@ -2406,36 +2637,40 @@
 }
 
 /*
- * DOS COLUMNAS, y es lo que le quita el aire de estar flotando.
+ * UNA REJILLA DE COLUMNAS, no una fila de bloques de alturas distintas.
  *
- * Antes eran cuatro párrafos apilados a la izquierda: la mancha colgaba en
- * mitad de una franja ancha y vacía, sin nada que la sujetara por el otro lado.
- * Con la firma anclada a la derecha, el bloque tiene sus dos extremos apoyados
- * y el pie deja de parecer un sobrante de la página.
+ * La versión anterior alineaba tres bloques por abajo (`align-items: flex-end`)
+ * y como medían 26, 42 y 62 px, sus líneas de texto caían a tres alturas: se
+ * veía torcido porque lo estaba. En una rejilla todas las columnas arrancan
+ * arriba, a la misma altura, y da igual lo que crezca cada una.
+ *
+ * `auto` para la primera —que lleva la prosa y necesita sitio— y `max-content`
+ * para las de enlaces, que deben medir lo que miden sus palabras y no repartirse
+ * el ancho a partes iguales dejando huecos en medio.
  */
 .pie__dentro {
   max-width: var(--ancho-sala);
   margin: 0 auto;
-  padding: 2.25rem 1.5rem 2.5rem;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
+  padding: 2.5rem 1.5rem 2rem;
+  display: grid;
+  grid-template-columns: minmax(14rem, 1.6fr) max-content max-content max-content;
   gap: 2rem 3rem;
-  flex-wrap: wrap;
+  align-items: start;
 }
 
-.pie__columna {
+.pie__col {
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  gap: 0.55rem;
   min-width: 0;
-  flex: none;
 }
 
-/* En escritorio el pie es una fila de tres: marca, texto y firma. El texto se
-   queda con el hueco que sobra, que es lo que sujeta los dos extremos. */
-.pie__que {
-  flex: 1 1 20rem;
+.pie__col--marca {
+  gap: 0.75rem;
+}
+
+.pie__col--firma {
+  align-items: flex-start;
 }
 
 .pie__marca {
@@ -2464,20 +2699,56 @@
 
 .pie__que {
   margin: 0;
-  max-width: 40rem;
-  font-size: 0.82rem;
+  max-width: 26rem;
+  font-size: 0.8rem;
   line-height: 1.6;
   color: var(--tenue);
 }
 
-/* ── La firma ─────────────────────────────────────────────────────────────── */
+/* El título de columna: pequeño, en versalitas y sin peso, que es lo que hace
+   que se lea como una etiqueta y no como otro enlace más. */
+.pie__titulo {
+  margin: 0 0 0.15rem;
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
 
-.pie__autoria {
+.pie__enlace {
+  font-size: 0.8rem;
+  color: var(--ink-suave);
+  text-align: left;
+  white-space: nowrap;
+  transition: color var(--veloz) var(--sale);
+}
+
+.pie__enlace:hover {
+  color: var(--acento-ink);
+}
+
+/* ── La barra de abajo ────────────────────────────────────────────────────── */
+
+.pie__barra {
+  border-top: 1px solid var(--linea);
+  background: var(--panel-alto);
+}
+
+.pie__barra-dentro {
+  max-width: var(--ancho-sala);
+  margin: 0 auto;
+  padding: 0.85rem 1.5rem;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.35rem;
-  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+  color: var(--tenue);
+}
+
+.pie__punto {
+  opacity: 0.45;
 }
 
 /*
@@ -2485,8 +2756,8 @@
  *
  * A tinta entera competiría con el nombre de la aplicación, y una firma no
  * grita: se ve cuando la buscas. Al pasar por encima sube a color entero, que
- * es lo que dice «esto se puede pulsar» sin poner un subrayado debajo de un
- * trazo a mano.
+ * es lo que dice «esto se puede pulsar» sin poner un subrayado bajo un trazo
+ * hecho a mano.
  */
 .pie__firmante {
   display: inline-flex;
@@ -2522,51 +2793,11 @@
  * texto a la izquierda, parecía un adorno suelto en la esquina.
  */
 @media (max-width: 760px) {
-  /*
-   * EL PIE OCUPABA 515 PX DE UNA PANTALLA DE 812. Dos tercios del teléfono para
-   * un pie de página.
-   *
-   * La causa era `flex: 1 1 22rem` en la columna de texto. En el escritorio el
-   * pie es una FILA y ese 22rem es un ancho mínimo razonable; en el móvil pasa
-   * a ser una COLUMNA, y entonces `flex-basis` deja de medir el ancho y mide el
-   * ALTO: trescientos cincuenta píxeles de nada reservados a la fuerza. Es la
-   * misma trampa que ya apareció en la estantería — `flex-basis` cambia de eje
-   * con la dirección, y a nadie se le ocurre repasarlo cuando escribe la
-   * consulta de medios.
-   *
-   * De paso, el pie de un teléfono no necesita ser una portada: la marca y la
-   * firma comparten fila, la firma baja de 62 a 38 px y el párrafo va debajo,
-   * pequeño. Unos ciento treinta píxeles en total.
-   */
-  .pie__dentro {
-    flex-direction: row;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.75rem 1rem;
-    padding: 1.4rem 1rem 1.6rem;
-  }
-
-  .pie__columna {
-    flex: 1 1 auto;
-    gap: 0;
-  }
-
-  .pie__autoria {
-    flex: none;
-    align-items: flex-end;
-  }
-
+  /* En un teléfono la firma se queda en 42 px: a 58 es lo más grande del pie y
+     le roba la mirada a todo lo demás. */
   .pie__firmante svg {
-    height: 38px;
+    height: 42px;
     width: auto;
-  }
-
-  /* El párrafo salta a su propia línea, debajo de los dos. */
-  .pie__que {
-    order: 3;
-    flex-basis: 100%;
-    font-size: 0.76rem;
-    line-height: 1.5;
   }
 }
 

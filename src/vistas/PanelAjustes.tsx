@@ -23,6 +23,8 @@ import { comprobarNube, olvidarToken, type EstadoNube } from "@/datos/nube";
 import { direccionGuardada, guardarDireccion, listarEnServidor, olvidarTunel } from "@/datos/servidor";
 import { FUENTES } from "@/nucleo/fuentes";
 import { leerRescates, olvidarRescate } from "@/datos/biblioteca";
+import { borrarCuenta } from "@/datos/sesion";
+import { DOCUMENTOS } from "@/vistas/Legal";
 import { CUANTAS_CORRECCIONES } from "@/nucleo/correccion";
 import { avisar } from "@/ui/Avisos";
 import { ACENTOS } from "@/ui/acento";
@@ -38,6 +40,7 @@ export function PanelAjustes({
   onAjustes,
   onCerrar,
   onRecargar,
+  onSalir,
 }: {
   ajustes: Ajustes;
   /** Somebody has signed in. The wiring section is theirs alone. */
@@ -45,6 +48,8 @@ export function PanelAjustes({
   onAjustes: (ajustes: Ajustes) => void;
   onCerrar: () => void;
   onRecargar: () => void;
+  /** Cerrar sesión: hace falta después de borrar la cuenta. */
+  onSalir: () => void;
 }) {
   /* El panel se queda montado mientras se desliza hacia fuera. */
   const salida = useSalida(true, onCerrar);
@@ -644,7 +649,104 @@ export function PanelAjustes({
           sección.
         </p>
       </div>
+
+      {dentro && <BorrarCuenta onBorrada={onSalir} />}
+
+      <div className="grupo grupo--legal">
+        <span className="grupo__titulo">Los papeles</span>
+        <div className="legal__enlaces">
+          {DOCUMENTOS.map((doc) => (
+            <a key={doc.clave} href={`#/legal/${doc.clave}`} onClick={salida.cerrar}>
+              {doc.titulo}
+            </a>
+          ))}
+        </div>
+      </div>
     </aside>
+  );
+}
+
+/**
+ * Borrarse del todo.
+ *
+ * ESTO NO ES UN EXTRA: la política de privacidad promete el derecho de
+ * supresión del artículo 17 del RGPD, y un derecho que hay que pedir por correo
+ * y esperar a que alguien lo atienda a mano no es un derecho, es un trámite.
+ *
+ * Va al final del panel, apagado, y con tres pasos antes del punto de no
+ * retorno: abrirlo, escribir la contraseña y confirmar. No es burocracia — es
+ * la única acción de toda la aplicación que no se puede deshacer, y la única
+ * defensa contra hacerla sin querer es que cueste un poco.
+ */
+function BorrarCuenta({ onBorrada }: { onBorrada: () => void }) {
+  const [abierto, setAbierto] = useState(false);
+  const [clave, setClave] = useState("");
+  const [yendo, setYendo] = useState(false);
+
+  const borrar = async () => {
+    setYendo(true);
+    const resultado = await borrarCuenta(clave);
+    setYendo(false);
+    if (resultado.ok) {
+      avisar("Cuenta borrada. Se ha ido todo.");
+      onBorrada();
+    } else {
+      avisar(resultado.motivo ?? "No se ha podido.", "error");
+    }
+  };
+
+  return (
+    <div className="grupo grupo--peligro">
+      <span className="grupo__titulo">Borrar mi cuenta</span>
+      {!abierto ? (
+        <>
+          <p className="campo__nota">
+            Se va todo: la cuenta, los libros que hay en el servidor y lo que tengas publicado en la
+            plaza. Es inmediato y no hay vuelta atrás.
+          </p>
+          <button type="button" className="boton boton--peligro" onClick={() => setAbierto(true)}>
+            <Icono nombre="papelera" /> Quiero borrar mi cuenta
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="campo__nota">
+            <strong>Antes de seguir:</strong> descarga lo que quieras conservar desde Exportar, en
+            cada libro. Después de esto no habrá de dónde sacarlo.
+          </p>
+          <label className="campo">
+            <span className="campo__etiqueta">Escribe tu contraseña para confirmar</span>
+            <input
+              className="entrada"
+              type="password"
+              value={clave}
+              autoComplete="current-password"
+              onChange={(evento) => setClave(evento.target.value)}
+            />
+          </label>
+          <div style={{ display: "flex", gap: "0.4rem" }}>
+            <button
+              type="button"
+              className="boton boton--peligro"
+              disabled={yendo || clave.length === 0}
+              onClick={() => void borrar()}
+            >
+              {yendo ? "Borrando…" : "Borrar para siempre"}
+            </button>
+            <button
+              type="button"
+              className="boton"
+              onClick={() => {
+                setAbierto(false);
+                setClave("");
+              }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

@@ -33,6 +33,7 @@ import { avisar, Avisos } from "@/ui/Avisos";
 import { SelectorColor } from "@/ui/Pie";
 import { Entrada } from "@/vistas/Entrada";
 import { Inicio } from "@/vistas/Inicio";
+import { Legal, DOCUMENTOS, type Documento } from "@/vistas/Legal";
 import { Plaza } from "@/vistas/Plaza";
 import { PanelAjustes } from "@/vistas/PanelAjustes";
 import { Taller } from "@/vistas/Taller";
@@ -46,15 +47,25 @@ import { Taller } from "@/vistas/Taller";
  * publicado. Con ese prefijo un enlace a una obra se puede mandar por mensaje y
  * abre donde tiene que abrir, que es la mitad de para qué sirve publicar.
  */
-function deLaUrl(): { libro: string | null; plaza: boolean; obra: string | null } {
+function deLaUrl(): {
+  libro: string | null;
+  plaza: boolean;
+  obra: string | null;
+  legal: Documento | null;
+} {
   const hash = decodeURIComponent(window.location.hash.replace(/^#\/?/, ""));
+  if (hash.startsWith("legal/")) {
+    const cual = hash.slice("legal/".length) as Documento;
+    const vale = DOCUMENTOS.some((doc) => doc.clave === cual);
+    return { libro: null, plaza: false, obra: null, legal: vale ? cual : "condiciones" };
+  }
   if (hash === "plaza") {
-    return { libro: null, plaza: true, obra: null };
+    return { libro: null, plaza: true, obra: null, legal: null };
   }
   if (hash.startsWith("plaza/")) {
-    return { libro: null, plaza: true, obra: hash.slice("plaza/".length) || null };
+    return { libro: null, plaza: true, obra: hash.slice("plaza/".length) || null, legal: null };
   }
-  return { libro: hash.length > 0 ? hash : null, plaza: false, obra: null };
+  return { libro: hash.length > 0 ? hash : null, plaza: false, obra: null, legal: null };
 }
 
 export function App() {
@@ -62,6 +73,7 @@ export function App() {
   const [abierto, setAbierto] = useState<string | null>(() => deLaUrl().libro);
   const [enPlaza, setEnPlaza] = useState(() => deLaUrl().plaza);
   const [obraPlaza, setObraPlaza] = useState<string | null>(() => deLaUrl().obra);
+  const [legal, setLegal] = useState<Documento | null>(() => deLaUrl().legal);
   /** El título del libro abierto, para la pestaña. Lo dice el taller. */
   const [tituloPestana, setTituloPestana] = useState<string | null>(null);
   const [catalogo, setCatalogo] = useState<Catalogo | null>(null);
@@ -225,6 +237,7 @@ export function App() {
       setAbierto(donde.libro);
       setEnPlaza(donde.plaza);
       setObraPlaza(donde.obra);
+      setLegal(donde.legal);
     };
     /* `popstate` cubre el botón de atrás; `hashchange` cubre que alguien pegue
        una dirección con hash en la barra o pulse un enlace a `#/plaza` desde
@@ -316,6 +329,28 @@ export function App() {
    * publicada mandaría al lector a un campo de contraseña — y entonces
    * publicar no serviría de nada. Cualquiera que llegue con el enlace lee.
    */
+  /*
+   * Los papeles, antes que nada y sin cuenta.
+   *
+   * Un enlace a las condiciones de uso tiene que abrir las condiciones de uso,
+   * venga de donde venga y lo lea quien lo lea. Ponerlos detrás de la puerta
+   * sería justamente lo contrario de para qué existen.
+   */
+  if (legal) {
+    return (
+      <div className="app">
+        <Legal
+          documento={legal}
+          onCerrar={() => {
+            setLegal(null);
+            window.history.pushState(null, "", "#");
+          }}
+        />
+        <Avisos />
+      </div>
+    );
+  }
+
   if (enPlaza) {
     return (
       <div className="app">
@@ -381,6 +416,11 @@ export function App() {
               onAjustes={cambiarAjustes}
               onCerrar={() => setAjustando(false)}
               onRecargar={() => void sincronizarYa(true).then(() => recargar(true))}
+              onSalir={() => {
+                salir();
+                setAjustando(false);
+                setVisita(false);
+              }}
             />
           )}
           {/*

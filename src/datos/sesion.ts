@@ -137,6 +137,51 @@ export function salir(): void {
 }
 
 /**
+ * Borrarse del todo: la cuenta, los libros del servidor y lo publicado.
+ *
+ * Pide la contraseña otra vez aunque haya sesión abierta. Es la única acción de
+ * la aplicación que no tiene vuelta atrás, y un testigo robado no puede bastar
+ * para borrarle a alguien todo lo que ha escrito.
+ *
+ * Lo que queda en ESTE navegador no lo borra el servidor: eso se limpia aquí,
+ * y se dice en la política de privacidad.
+ */
+export async function borrarCuenta(clave: string): Promise<{ ok: boolean; motivo?: string }> {
+  const sesion = leerSesion();
+  if (!sesion) {
+    return { ok: false, motivo: "No hay ninguna sesión abierta." };
+  }
+  try {
+    const respuesta = await fetch(`${PUERTA}/api/auth/cuenta`, {
+      method: "DELETE",
+      headers: {
+        authorization: `Bearer ${sesion.token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ clave }),
+    });
+    if (!respuesta.ok) {
+      const datos = (await respuesta.json().catch(() => null)) as { error?: string } | null;
+      return { ok: false, motivo: datos?.error ?? "No se ha podido borrar la cuenta." };
+    }
+  } catch {
+    return { ok: false, motivo: "Sin conexión: inténtalo cuando vuelva." };
+  }
+
+  /* Y la copia local. Si esto se dejara, entrar con otra cuenta en el mismo
+     navegador se encontraría con los libros de la anterior. */
+  for (const llave of ["pliego.libros", "pliego.rescate", "pliego.borrador", "pliego.diario"]) {
+    try {
+      localStorage.removeItem(llave);
+    } catch {
+      // Modo privado: no había nada que borrar.
+    }
+  }
+  guardar(null);
+  return { ok: true };
+}
+
+/**
  * Ask the server whether this session is still good.
  *
  * The token carries its own expiry and is signed, so the client can already

@@ -97,11 +97,23 @@ export function Inicio({
             </p>
           </div>
 
+          {/*
+            * UNA SOLA FILA, TODO DEL MISMO PESO.
+            *
+            * Había tres cosas con tres aspectos distintos: un recuadro con
+            * borde («En tu cuenta»), dos botones sin borde y otro con borde.
+            * Tres pesos visuales en cuatro centímetros, sin que la diferencia
+            * significara nada — y a eso él lo llamó, con razón, aspecto de web
+            * de universitario.
+            *
+            * Ahora todos son el mismo botón desnudo y solo hay UNA excepción:
+            * «Entrar», que es la única acción principal de esta pantalla cuando
+            * no hay sesión. Una pantalla, una acción principal.
+            */}
           <div className="inicio__acciones">
-            {dentro && catalogo && <Origen catalogo={catalogo} onRecargar={onRecargar} />}
-            {/* La plaza está a la vista y no escondida en un menú: es la única
-                parte de esto que existe para los demás, y si no se ve no la
-                visita nadie. */}
+            {dentro && catalogo && <Guardado catalogo={catalogo} onRecargar={onRecargar} />}
+            {/* La plaza a la vista y no escondida en un menú: es la única parte
+                de esto que existe para los demás, y si no se ve no va nadie. */}
             <button type="button" className="boton boton--desnudo" onClick={onPlaza}>
               <Icono nombre="libro" />
               <span className="boton__texto">La plaza</span>
@@ -111,8 +123,9 @@ export function Inicio({
               <span className="boton__texto">Ajustes</span>
             </button>
             {dentro ? (
-              <button type="button" className="boton" onClick={onSalir}>
-                Salir
+              <button type="button" className="boton boton--desnudo" onClick={onSalir}>
+                <Icono nombre="atras" />
+                <span className="boton__texto">Salir</span>
               </button>
             ) : (
               <button type="button" className="boton boton--principal" onClick={onEntrar}>
@@ -240,7 +253,7 @@ export function Inicio({
         </section>
       </div>
 
-      <Pie />
+      <Pie onPlaza={onPlaza} />
 
       {creando && (
         <DialogoTexto
@@ -432,52 +445,40 @@ function Obra({
   );
 }
 
-const TEXTO_ORIGEN: Record<Catalogo["via"], string> = {
-  servidor: "En tu ordenador y en tu cuenta",
-  cuenta: "En tu cuenta",
-  nube: "En la nube",
-  local: "Solo en este navegador",
-};
-
 /**
- * Qué está contestando, en una frase por sitio.
+ * Si lo escrito está a salvo, dicho en dos palabras.
  *
- * Ya no es «de dónde salen los libros»: salen de los cuatro sitios a la vez y
- * se funden. Lo que importa saber de un vistazo es OTRA COSA — si lo que estás
- * escribiendo va a aparecer en tus otros navegadores, y si va a acabar siendo
- * un archivo de verdad. Eso es lo que se cuenta aquí.
+ * ANTES DECÍA «EN TU CUENTA» Y ESO NO SIGNIFICA NADA para quien acaba de
+ * llegar: es el nombre interno de uno de los cuatro sitios donde esta
+ * aplicación guarda. La pregunta que se hace de verdad quien mira ahí arriba es
+ * otra, y solo una: «lo que estoy escribiendo, ¿está a salvo?». Así que se
+ * contesta esa, con un punto de color y una palabra.
+ *
+ * El detalle técnico —qué contesta y qué no— sigue estando, pero donde le
+ * corresponde: al pasar el ratón por encima.
  */
-function explicar(catalogo: Catalogo): string {
-  const lineas = [
-    catalogo.servidorVivo
-      ? "· Tu ordenador responde: los libros se están escribiendo en los .md de Drive."
-      : "· Tu ordenador no responde. Lo que escribas queda en cola y él lo aplicará al archivo cuando vuelva.",
-    catalogo.cuentaViva
-      ? "· Tu cuenta responde: esto mismo se ve entrando en cualquier otro navegador."
-      : "· Tu cuenta no responde, así que de momento esto no viaja a tus otros navegadores.",
-    catalogo.nubeViva
-      ? "· La nube cifrada responde."
-      : "· La nube cifrada no responde (o falta la clave de la biblioteca).",
-  ];
-  return `${lineas.join("\n")}\n\nPulsa para sincronizar ahora.`;
-}
+function Guardado({ catalogo, onRecargar }: { catalogo: Catalogo; onRecargar: () => void }) {
+  /* Lo que importa es que salga de esta pestaña. El ordenador o la cuenta,
+     cualquiera de los dos, ya lo resuelve. */
+  const aSalvo = catalogo.servidorVivo || catalogo.cuentaViva;
+  const tono = aSalvo ? "bien" : catalogo.nubeViva ? "nube" : "mal";
 
-function Origen({ catalogo, onRecargar }: { catalogo: Catalogo; onRecargar: () => void }) {
-  /* El punto va por lo que de verdad preocupa: que los libros lleguen a algún
-     sitio que no sea esta pestaña. Con la cuenta o el ordenador vivos, está
-     resuelto. */
-  const via = catalogo.servidorVivo
-    ? "servidor"
-    : catalogo.cuentaViva
-      ? "cuenta"
-      : catalogo.nubeViva
-        ? "nube"
-        : "local";
-  const texto = catalogo.servidorVivo && !catalogo.cuentaViva ? "En tu ordenador" : TEXTO_ORIGEN[via];
+  const explica = [
+    catalogo.servidorVivo
+      ? "· Tu ordenador responde: se están escribiendo los archivos de verdad."
+      : "· Tu ordenador no responde. Lo escrito queda en cola y él lo aplicará al volver.",
+    catalogo.cuentaViva
+      ? "· Tu cuenta responde: esto mismo se ve entrando desde cualquier otro sitio."
+      : "· Tu cuenta no responde, así que de momento esto no viaja a tus otros dispositivos.",
+    catalogo.nubeViva ? "· La copia cifrada responde." : "· La copia cifrada no responde.",
+    "",
+    "Pulsa para comprobarlo ahora.",
+  ].join("\n");
+
   return (
-    <button type="button" className="origen" onClick={onRecargar} title={explicar(catalogo)}>
-      <span className={`origen__punto origen__punto--${via}`} />
-      {texto}
+    <button type="button" className="boton boton--desnudo" onClick={onRecargar} title={explica}>
+      <span className={`punto punto--${tono}`} />
+      <span className="boton__texto">{aSalvo ? "Guardado" : "Solo aquí"}</span>
     </button>
   );
 }
