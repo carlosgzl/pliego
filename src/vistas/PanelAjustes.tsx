@@ -19,15 +19,17 @@ import {
 } from "@/datos/ajustes";
 import { guardarClave, leerClave } from "@/datos/clave";
 import { hayCuenta, leerDeCuenta } from "@/datos/cuenta";
-import { comprobarNube, olvidarToken, SITIO_NUBE, type EstadoNube } from "@/datos/nube";
+import { comprobarNube, olvidarToken, type EstadoNube } from "@/datos/nube";
 import { direccionGuardada, guardarDireccion, listarEnServidor, olvidarTunel } from "@/datos/servidor";
 import { FUENTES } from "@/nucleo/fuentes";
 import { leerRescates, olvidarRescate } from "@/datos/biblioteca";
+import { CUANTAS_CORRECCIONES } from "@/nucleo/correccion";
 import { avisar } from "@/ui/Avisos";
 import { ACENTOS } from "@/ui/acento";
 import { comoAplicacion } from "@/ui/pantalla";
 import { Icono } from "@/ui/Icono";
 import { probarSonido, SONIDOS, type Sonido } from "@/ui/sonido";
+import { Segmentado } from "@/ui/Segmentado";
 import { useSalida } from "@/ui/useSalida";
 
 export function PanelAjustes({
@@ -61,6 +63,12 @@ export function PanelAjustes({
    * son extras y no cambian la respuesta.
    */
   const aSalvo = cuenta || servidor === "si";
+
+  /*
+   * Lo de conectar un servidor propio solo se enseña a quien ya lo tiene.
+   * Ver el comentario largo de más abajo, junto al bloque.
+   */
+  const avanzadoVisible = leerClave() !== null || servidor === "si";
 
   useEffect(() => {
     void probarTodo();
@@ -141,17 +149,32 @@ export function PanelAjustes({
             </div>
           </div>
 
+          {/*
+            * ESTA PARTE SOLO EXISTE PARA QUIEN YA LA ESTÁ USANDO.
+            *
+            * Pliego se publica para cualquiera, y a cualquiera no le dice nada
+            * un servidor propio, una clave de biblioteca ni el nombre de otro
+            * programa. Enseñárselo es peor que inútil: parece que a la web le
+            * falta algo por configurar cuando no le falta nada.
+            *
+            * Así que aparece únicamente si YA está en uso — hay una clave
+            * guardada o hay un servidor contestando. Quien lo tenía montado lo
+            * conserva entero; el resto del mundo no sabe que existe. Y ningún
+            * texto de aquí menciona ya ningún programa concreto: se habla de
+            * «un servidor propio», que es lo que es.
+            */}
+          {avanzadoVisible && (
           <details className="avanzado">
             <summary className="avanzado__titulo">
-              Añadidos para tu ordenador
-              <span className="avanzado__pista">opcional</span>
+              Guardar también en un servidor tuyo
+              <span className="avanzado__pista">avanzado</span>
             </summary>
 
             <p className="campo__nota">
               Nada de esto hace falta para escribir ni para que tus libros te sigan de un navegador
               a otro. Sirve para una cosa muy concreta: que cada obra sea además un archivo{" "}
-              <code>.md</code> de verdad en el Drive de tu ordenador, el mismo que abre Alexandria y
-              que puedes leer sin esta web.
+              <code>.md</code> de verdad en un ordenador tuyo, que puedes abrir con cualquier editor
+              y leer sin esta web.
             </p>
 
             <div className="campo">
@@ -187,8 +210,8 @@ export function PanelAjustes({
                 </span>
               </span>
               <p className="campo__nota">
-                El puente hasta el ordenador cuando está apagado ({SITIO_NUBE.replace("https://", "")}).
-                Se cifra aquí, en este navegador: nadie de ahí puede leer una palabra.
+                El puente hasta ese ordenador cuando está apagado. Todo se cifra aquí, en este
+                navegador, antes de salir: donde se guarda no hay más que bytes que nadie puede leer.
               </p>
             </div>
 
@@ -199,12 +222,12 @@ export function PanelAjustes({
                 type="password"
                 value={clave}
                 autoComplete="off"
-                placeholder="la misma que abre Alexandria"
+                placeholder="la clave de tu biblioteca"
                 onChange={(evento) => setClave(evento.target.value)}
               />
               <span className="campo__nota">
-                Está en <code>biblioteca.clave.txt</code>, en la carpeta de Alexandria de tu
-                ordenador. Sin ella todo sigue funcionando; solo se queda fuera el puente cifrado.
+                La misma con la que se publicó la biblioteca en ese ordenador. Sin ella todo sigue
+                funcionando; solo se queda fuera el puente cifrado.
               </span>
             </label>
 
@@ -242,6 +265,7 @@ export function PanelAjustes({
               </button>
             </div>
           </details>
+          )}
         </div>
       )}
 
@@ -383,6 +407,35 @@ export function PanelAjustes({
           Escribe <code>...</code> y sale «…»; <code>--</code> sale «—»; <code>&lt;&lt;</code> y{" "}
           <code>&gt;&gt;</code> salen «» .
         </span>
+
+        <div className="campo">
+          <span className="campo__etiqueta">Corrector</span>
+          <Segmentado
+            opciones={[
+              { valor: "ninguno", texto: "Nada" },
+              { valor: "sugerir", texto: "Sugerir" },
+              { valor: "corregir", texto: "Corregir" },
+            ]}
+            valor={ajustes.corrector}
+            onCambiar={(valor) =>
+              onAjustes({ ...ajustes, corrector: valor as Ajustes["corrector"] })
+            }
+          />
+          <span className="campo__nota">
+            {ajustes.corrector === "ninguno" &&
+              "Nadie toca nada: ni subrayados ni cambios. Escribes tú y ya."}
+            {ajustes.corrector === "sugerir" &&
+              "Subraya en rojo lo que está mal y propone la corrección con el botón derecho, usando el diccionario de español de tu navegador."}
+            {ajustes.corrector === "corregir" && (
+              <>
+                Lo anterior y, además, arregla solo {CUANTAS_CORRECCIONES} faltas frecuentes al
+                terminar la palabra: «tambien» por «también», «q» por «que», «HOla» por «Hola».{" "}
+                <strong>Nunca toca «mas», «si», «tu», «el» ni «esta»</strong>: son dos palabras
+                distintas según lleven tilde, y eso lo decides tú.
+              </>
+            )}
+          </span>
+        </div>
 
         <label className="interruptor">
           <span className="interruptor__texto">

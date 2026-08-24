@@ -53,6 +53,11 @@ import {
   tipografia,
   type Edicion,
 } from "@/nucleo/edicion";
+import {
+  arreglarMayusculaDoble,
+  corregirAlTerminar,
+  type ModoCorrector,
+} from "@/nucleo/correccion";
 import { FUENTES, pilaDe } from "@/nucleo/fuentes";
 import { medidaMm } from "@/nucleo/geometria";
 import { componer, descomponer, type Meta } from "@/nucleo/libro";
@@ -90,6 +95,20 @@ import { Exportar } from "./Exportar";
 
 /** Cuánto se espera tras la última tecla antes de escribir el libro. */
 const ESPERA_GUARDADO = 1200;
+
+/** Cómo se llama cada modo del corrector, para decirlo en el menú. */
+const NOMBRE_CORRECTOR: Record<ModoCorrector, string> = {
+  ninguno: "nada",
+  sugerir: "sugerir",
+  corregir: "corregir solo",
+};
+
+/** El botón del menú recorre los tres en orden. */
+const SIGUIENTE_CORRECTOR: Record<ModoCorrector, ModoCorrector> = {
+  ninguno: "sugerir",
+  sugerir: "corregir",
+  corregir: "ninguno",
+};
 
 type Estado = "abriendo" | "limpio" | "escribiendo" | "guardando" | "guardado" | "problema";
 
@@ -718,10 +737,27 @@ export function Taller({
     setCuerpo(valor);
     setCursor(posicion);
     const tecleado = tipo === undefined || tipo === "insertText";
-    if (ajustes.tipografia && tecleado && !aplicando.current) {
+    if (!tecleado || aplicando.current) {
+      return;
+    }
+    if (ajustes.tipografia) {
       const arreglo = tipografia(valor, posicion);
       if (arreglo) {
         aplicar(arreglo);
+        return;
+      }
+    }
+    /*
+     * El corrector automático, por el mismo camino que la tipografía: al cerrar
+     * la palabra y solo sobre lo que se acaba de escribir. Va DESPUÉS de la
+     * tipografía porque las dos pueden dispararse con el mismo espacio y solo
+     * puede aplicarse una edición por pulsación — y las comillas mandan, que
+     * cambian un carácter que se acaba de teclear.
+     */
+    if (ajustes.corrector === "corregir") {
+      const arreglo = corregirAlTerminar(valor, posicion) ?? arreglarMayusculaDoble(valor, posicion);
+      if (arreglo) {
+        aplicar({ texto: arreglo.texto, desde: arreglo.cursor, hasta: arreglo.cursor });
       }
     }
   };
@@ -932,12 +968,12 @@ export function Taller({
     },
     {
       clave: "corrector",
-      nombre: "Corrector ortográfico",
+      nombre: `Corrector: ${NOMBRE_CORRECTOR[ajustes.corrector]}`,
       icono: "guardado",
       ayuda:
-        "Subraya en rojo las palabras mal escritas usando el diccionario de español de tu navegador. Con el botón derecho encima te propone la corrección.",
-      puesto: ajustes.corrector,
-      hacer: () => onAjustes({ ...ajustes, corrector: !ajustes.corrector }),
+        "Tres modos, y el botón los recorre: SUGERIR subraya en rojo y propone la corrección con el botón derecho, usando el diccionario de tu navegador. CORREGIR además arregla solo las faltas que no tienen dos lecturas —«tambien» por «también»— al terminar la palabra; nunca toca «mas», «si» ni «tu», que son dos palabras distintas según lleven tilde. NADA es nada: escribes tú y ya.",
+      puesto: ajustes.corrector !== "ninguno",
+      hacer: () => onAjustes({ ...ajustes, corrector: SIGUIENTE_CORRECTOR[ajustes.corrector] }),
     },
     {
       clave: "tipografia",
@@ -1204,7 +1240,7 @@ export function Taller({
                 ref={area}
                 className="manuscrito__area"
                 value={cuerpo}
-                spellCheck={ajustes.corrector}
+                spellCheck={ajustes.corrector !== "ninguno"}
                 lang="es"
                 placeholder="Empieza por la primera frase. Lo demás viene detrás."
                 style={tipoEditor}

@@ -9,6 +9,7 @@
  * a desktop.
  */
 
+import type { ModoCorrector } from "@/nucleo/correccion";
 import type { Sonido } from "@/ui/sonido";
 
 const ALMACEN = "pliego.ajustes";
@@ -79,14 +80,13 @@ export interface Ajustes {
   /** Type-as-you-go typographic replacements («», —, …). */
   tipografia: boolean;
   /**
-   * El corrector del navegador, encendido o apagado.
+   * El corrector, en tres modos. Ver `nucleo/correccion.ts`.
    *
-   * Se usa el del sistema y no uno propio a propósito: trae el diccionario de
-   * español del usuario, sus palabras añadidas y el menú de sugerencias del
-   * botón derecho. Un corrector escrito aquí sería peor y pesaría megas.
-   * Apagable porque a mucha gente el subrayado rojo le corta el hilo.
+   * Era un interruptor de sí o no, y se quedaba corto en los dos extremos: a
+   * quien le molesta el subrayado no le sirve tenerlo puesto, y a quien escribe
+   * deprisa le gustaría que las faltas obvias se arreglaran solas.
    */
-  corrector: boolean;
+  corrector: ModoCorrector;
   /** Warn before leaving with unsaved text. */
   avisarSalida: boolean;
   /** Cómo suena cada tecla. Ver `ui/sonido.ts`. */
@@ -134,7 +134,7 @@ export const AJUSTES_POR_DEFECTO: Ajustes = {
   sitioGadgets: "abajo",
   capitulos: false,
   tipografia: true,
-  corrector: true,
+  corrector: "sugerir",
   avisarSalida: true,
   sonido: "ninguno",
   volumenSonido: 0.6,
@@ -153,6 +153,12 @@ export function leerAjustes(): Ajustes {
     // existen; filtrarlas aquí evita un hueco vacío en la barra.
     const validas = new Set(GADGETS.map((g) => g.clave as string));
     guardados.gadgets = (guardados.gadgets ?? []).filter((clave) => validas.has(clave));
+    /* El corrector era un booleano y ahora tiene tres modos. Quien lo tuviera
+       puesto se queda con «sugerir», que es exactamente lo que tenía; quien lo
+       tuviera quitado, con «ninguno». Nadie se encuentra un ajuste cambiado. */
+    if (typeof (guardados.corrector as unknown) === "boolean") {
+      guardados.corrector = (guardados.corrector as unknown as boolean) ? "sugerir" : "ninguno";
+    }
     return guardados;
   } catch {
     return { ...AJUSTES_POR_DEFECTO };

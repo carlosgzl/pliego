@@ -20,6 +20,7 @@
  */
 
 import { useRef, useState, type ChangeEvent } from "react";
+import { Segmentado } from "@/ui/Segmentado";
 import { useSalida } from "@/ui/useSalida";
 import { contarPalabras } from "@/nucleo/bloques";
 import { FUENTES, GRUPOS_FUENTE, pilaDe } from "@/nucleo/fuentes";
@@ -1167,29 +1168,3 @@ function Interruptor({
   );
 }
 
-function Segmentado({
-  opciones,
-  valor,
-  onCambiar,
-}: {
-  opciones: { valor: string; texto: string }[];
-  valor: string;
-  onCambiar: (valor: string) => void;
-}) {
-  return (
-    <div className="segmentado">
-      {opciones.map((opcion) => (
-        <button
-          key={opcion.valor}
-          type="button"
-          className={`segmentado__opcion${
-            valor === opcion.valor ? " segmentado__opcion--aqui" : ""
-          }`}
-          onClick={() => onCambiar(opcion.valor)}
-        >
-          {opcion.texto}
-        </button>
-      ))}
-    </div>
-  );
-}
