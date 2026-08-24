@@ -96,13 +96,20 @@
 /*
  * El panel lateral entra deslizando desde su propio lado.
  *
- * `will-change` avisa al navegador de que va a mover esto, para que lo suba a
- * su propia capa ANTES del primer fotograma; sin él, el primer frame de un
- * panel grande se salta casi siempre.
+ * AQUÍ HABÍA UN `will-change: transform` Y HACÍA DAÑO. La idea era buena —subir
+ * el panel a su propia capa antes del primer fotograma para que no se salte—
+ * pero `will-change` no se levanta cuando la animación acaba: deja el elemento
+ * en una capa compositada PARA SIEMPRE, y en una capa compositada el navegador
+ * apaga el suavizado subpíxel del texto. Resultado: todo el panel de diseño se
+ * veía ligeramente difuminado, y así lo describió él. Un panel que se lee mal
+ * el 100 % del tiempo no compensa un fotograma mejor al abrirlo.
+ *
+ * No hace falta sustituirlo por nada: un elemento con una animación de
+ * `transform` en marcha ya lo sube el navegador a su capa mientras dura, y la
+ * suelta al terminar. Que es exactamente lo que se quería.
  */
 .panel {
   animation: entrar-derecha var(--calmo) var(--sale);
-  will-change: transform;
 }
 
 .panel--izquierda {
@@ -115,7 +122,6 @@
 
 .capitulos {
   animation: entrar-izquierda var(--calmo) var(--sale);
-  will-change: transform;
 }
 
 .previa {

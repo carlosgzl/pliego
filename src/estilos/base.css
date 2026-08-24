@@ -68,6 +68,17 @@
   --hoja-ink: #16171a;
   --hoja-sombra: 0 1px 2px rgb(0 0 0 / 8%), 0 8px 24px -8px rgb(0 0 0 / 18%);
 
+  /*
+   * Lo ancho que es «la sala»: la estantería y el pie, que tienen que ir a la
+   * misma medida o el pie se lee como una banda de otro sitio.
+   *
+   * Era de 64rem y se quedaba corto: en un monitor normal dejaba doscientos y
+   * pico píxeles de fondo muerto a cada lado y la pantalla se sentía apretada
+   * en el centro. Esto NO es texto de leer —son portadas, cifras y botones—, y
+   * la medida cómoda de lectura no manda sobre una rejilla.
+   */
+  --ancho-sala: 84rem;
+
   --radio: 5px;
   --radio-grande: 8px;
 
@@ -75,13 +86,6 @@
     "Plex", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
     Arial, sans-serif;
   --mono: ui-monospace, "Cascadia Code", Consolas, "SF Mono", "JetBrains Mono", monospace;
-  /*
-   * La romana de la casa, para lo poco que NO es interfaz: una cita, un texto
-   * que quiere leerse como literatura y no como un rótulo. Es la misma pila que
-   * «Garamond» en el catálogo de fuentes del libro, para que la voz de la
-   * aplicación y la del papel sean la misma cuando se cruzan.
-   */
-  --serif: "EB Garamond", Garamond, "Adobe Garamond Pro", "Book Antiqua", Georgia, serif;
 
   --paso: 0.15s ease;
   color-scheme: light;

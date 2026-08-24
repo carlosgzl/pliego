@@ -53,7 +53,7 @@ import {
   tipografia,
   type Edicion,
 } from "@/nucleo/edicion";
-import { pilaDe } from "@/nucleo/fuentes";
+import { FUENTES, pilaDe } from "@/nucleo/fuentes";
 import { medidaMm } from "@/nucleo/geometria";
 import { componer, descomponer, type Meta } from "@/nucleo/libro";
 import {
@@ -670,6 +670,14 @@ export function Taller({
         escena();
         return;
       }
+      /* El cuerpo de la letra con Ctrl y +/−, que es el atajo que todo el mundo
+         prueba primero. Se le quita al navegador su zoom, que aquí hace lo
+         mismo pero peor: agranda TODA la aplicación, barra incluida. */
+      if (tecla === "+" || tecla === "=" || tecla === "-" || tecla === "_") {
+        evento.preventDefault();
+        cuerpoLetra(tecla === "-" || tecla === "_" ? -1 : 1);
+        return;
+      }
       /* La medida, con las flechas. Con Shift para no pisar el salto de palabra
          de Ctrl+← y Ctrl+→, que en un editor de texto es sagrado. */
       if (evento.shiftKey && (evento.key === "ArrowRight" || evento.key === "ArrowLeft")) {
@@ -882,6 +890,13 @@ export function Taller({
    *
    * De cuatro en cuatro: de uno en uno no se nota y no acabas nunca.
    */
+  /** El cuerpo de la letra del editor, de punto en punto. */
+  const cuerpoLetra = (pasos: number) =>
+    onAjustes({
+      ...ajustes,
+      tamanoEditor: Math.min(34, Math.max(12, ajustes.tamanoEditor + pasos)),
+    });
+
   const medida = (pasos: number) =>
     onAjustes({
       ...ajustes,
@@ -928,6 +943,45 @@ export function Taller({
         "Escribe tres puntos y salen puntos suspensivos de verdad; dos guiones, una raya de diálogo; << y >>, comillas españolas.",
       puesto: ajustes.tipografia,
       hacer: () => onAjustes({ ...ajustes, tipografia: !ajustes.tipografia }),
+    },
+  ];
+
+  /**
+   * LA LETRA CON LA QUE ESCRIBES, aquí y no en Ajustes.
+   *
+   * Estaba en Ajustes desde siempre, en la estantería — o sea, en la pantalla
+   * de la que sales para escribir. Su frase fue «no veo cómo hacerlo», y con
+   * razón: elegir con qué letra te sientes cómodo escribiendo es algo que se
+   * decide ESCRIBIENDO, mirando tu propio párrafo, no dos pantallas atrás.
+   *
+   * Ojo con lo que NO es: esta es la letra del EDITOR, la de la pantalla. La
+   * del libro impreso se elige en Diseño y viaja dentro del archivo. Son dos
+   * decisiones distintas a propósito — se puede escribir en una sans cómoda de
+   * pantalla un libro que se imprime en Garamond.
+   */
+  const accionesLetra: Accion[] = [
+    ...FUENTES.map((fuente) => ({
+      clave: `f-${fuente.key}`,
+      nombre: fuente.name,
+      icono: "cursiva" as const,
+      ayuda: fuente.hint,
+      puesto: ajustes.fuenteEditor === fuente.key,
+      hacer: () => onAjustes({ ...ajustes, fuenteEditor: fuente.key }),
+    })),
+    {
+      clave: "mas-grande",
+      nombre: "Más grande",
+      icono: "mas",
+      atajo: "Ctrl++",
+      corte: true,
+      hacer: () => cuerpoLetra(1),
+    },
+    {
+      clave: "mas-pequena",
+      nombre: "Más pequeña",
+      icono: "escena",
+      atajo: "Ctrl+−",
+      hacer: () => cuerpoLetra(-1),
     },
   ];
 
@@ -1065,6 +1119,7 @@ export function Taller({
               </button>
             )}
             <MenuBarra etiqueta="Escribir" icono="lapiz" acciones={accionesEscribir} />
+            <MenuBarra etiqueta="Letra" icono="cursiva" acciones={accionesLetra} />
             <MenuBarra etiqueta="Ver" icono="ojo" acciones={accionesVer} />
             <BotonBarra
               nombre="Diseño"

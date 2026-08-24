@@ -102,6 +102,10 @@ export function Entrada({
         <figure className="cita">
           <blockquote className="cita__texto">{cita.texto}</blockquote>
           <figcaption className="cita__firma">
+            {/* La raya delante del autor es un carácter de verdad, no una caja
+                de un píxel dibujada con CSS: así se firma una cita, y así se
+                copia y se lee en voz alta si hace falta. */}
+            <span aria-hidden="true">—</span>
             {cita.autor}
             {cita.obra && <span className="cita__obra">{cita.obra}</span>}
           </figcaption>
