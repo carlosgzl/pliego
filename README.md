@@ -97,6 +97,30 @@ derivación de un solo sentido que no sirve para descifrar nada.
 > `netlify/functions/auth.mjs`, para que el almacén de la cuenta converja aunque
 > dos dispositivos escriban a la vez. Si cambia `fusion.ts`, cambia allí.
 
+## La plaza
+
+Un escaparate público, no una red social. Hay portadas, se pulsa una y se lee.
+**No hay seguidores, ni «me gusta», ni comentarios**: en cuanto una herramienta
+de escribir empieza a contar audiencia se escribe para la audiencia, y esto
+existe para lo contrario.
+
+- **Se lee sin cuenta.** La plaza va antes que la puerta en la aplicación, así
+  que un enlace a una obra (`#/plaza/quien/obra`) se le puede mandar a alguien
+  que no ha oído hablar de Pliego y funciona. La cuenta solo hace falta para
+  **poner** algo.
+- **Lo publicado es una copia congelada**, no el libro que estás escribiendo. Si
+  fueran el mismo objeto, cada palabra cambiaría lo que otro está leyendo en ese
+  instante. Publicar es un gesto que se repite, como una edición.
+- **El escaparate pesa kilobytes.** Cada ficha lleva el *diseño* de la portada,
+  no la fotografía: se dibuja con el mismo componente que pinta las de dentro.
+- **Con límites**, porque es una superficie pública donde cualquiera con cuenta
+  escribe: tope por obra, veinte obras por persona, trescientas en el
+  escaparate. Se retira cuando se quiera.
+
+En la misma pantalla hay ocho sitios donde se publica en serio —Wattpad, KDP,
+Lektu, Royal Road…— con lo que hace cada uno. Esta plaza es un escaparate
+pequeño, y quien acaba de terminar un libro merece saberlo.
+
 ## La portada
 
 Se diseña encima de la portada de verdad — el mismo componente que pinta la
@@ -126,6 +150,11 @@ Lo que hace que apetezca escribir aquí, y por qué cada cosa está como está:
   entero por estado (`src/ui/area.ts`). Poner el valor entero hace que el
   navegador **tire su pila de deshacer**: bastaba con escribir `...` para perder
   todo lo deshacible del último rato.
+- **El corrector tiene tres modos**: nada, sugerir (el del navegador, con su
+  diccionario) o corregir solo. El tercero arregla al terminar la palabra, y
+  **solo lo que no tiene dos lecturas**: «tambien» sí, «mas» nunca — porque
+  «más» y «mas» son dos palabras y elegir por ti sería cambiar lo que dice la
+  frase. Y se deshace con Ctrl+Z como cualquier otra edición.
 - **Las marcas están donde está la mano.** Seleccionas, botón derecho, y ahí
   tienes negrita, cursiva, capítulo y escena — sin subir a la barra. Sin nada
   seleccionado el botón derecho sigue siendo el del navegador, que es donde vive
