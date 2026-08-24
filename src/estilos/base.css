@@ -75,6 +75,13 @@
     "Plex", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
     Arial, sans-serif;
   --mono: ui-monospace, "Cascadia Code", Consolas, "SF Mono", "JetBrains Mono", monospace;
+  /*
+   * La romana de la casa, para lo poco que NO es interfaz: una cita, un texto
+   * que quiere leerse como literatura y no como un rótulo. Es la misma pila que
+   * «Garamond» en el catálogo de fuentes del libro, para que la voz de la
+   * aplicación y la del papel sean la misma cuando se cruzan.
+   */
+  --serif: "EB Garamond", Garamond, "Adobe Garamond Pro", "Book Antiqua", Georgia, serif;
 
   --paso: 0.15s ease;
   color-scheme: light;

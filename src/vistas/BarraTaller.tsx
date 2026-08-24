@@ -33,6 +33,8 @@ export interface Accion {
   atajo?: string;
   /** Un interruptor pintado como activo cuando lo está. */
   puesto?: boolean;
+  /** Una raya de separación ANTES de esta acción, para agrupar por familias. */
+  corte?: boolean;
   hacer: () => void;
 }
 
@@ -111,14 +113,15 @@ export function MenuBarra({
                 )}
               </button>
             );
-            return accion.ayuda ? (
-              <Ayuda key={accion.clave} texto={accion.ayuda}>
-                {boton}
-              </Ayuda>
+            const fila = accion.ayuda ? (
+              <Ayuda texto={accion.ayuda}>{boton}</Ayuda>
             ) : (
-              <span key={accion.clave} className="menu__fila">
-                {boton}
-              </span>
+              <span className="menu__fila">{boton}</span>
+            );
+            return (
+              <div key={accion.clave} className={accion.corte ? "menu__corte" : undefined}>
+                {fila}
+              </div>
             );
           })}
         </div>

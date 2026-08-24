@@ -280,6 +280,26 @@
   animation: menguar var(--veloz) var(--entra) forwards;
 }
 
+/*
+ * La paleta de color se va CON CALMA, y es la excepción a la regla de arriba.
+ *
+ * La regla general —salir sin ceremonia— vale para lo que se cierra porque ya
+ * has decidido: un panel, un diálogo, un menú. La paleta no se cierra por una
+ * decisión, se cierra porque has apartado el ratón; y una cosa que se va sola
+ * en 120 ms se lee como un parpadeo, no como una salida. Con el doble de
+ * tiempo y encogiendo hacia su propio botón, se va como vino.
+ */
+@keyframes recoger {
+  to {
+    opacity: 0;
+    transform: scale(0.82) translateX(10px);
+  }
+}
+
+.paleta__ramo--cerrando {
+  animation: recoger var(--normal) var(--entra) forwards;
+}
+
 .aviso--cerrando {
   animation: hundir var(--veloz) var(--entra) forwards;
 }

@@ -42,6 +42,7 @@ export function SelectorColor({
 }) {
   const [abierto, setAbierto] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
+  const gracia = useRef<number | null>(null);
   const salida = useSalida(abierto, () => setAbierto(false));
 
   useEffect(() => {
@@ -66,11 +67,50 @@ export function SelectorColor({
     };
   }, [abierto, salida]);
 
+  useEffect(() => {
+    return () => {
+      if (gracia.current !== null) {
+        window.clearTimeout(gracia.current);
+      }
+    };
+  }, []);
+
+  const quedarse = () => {
+    if (gracia.current !== null) {
+      window.clearTimeout(gracia.current);
+      gracia.current = null;
+    }
+  };
+
+  /*
+   * SE QUEDA ABIERTA MIENTRAS EL RATÓN ESTÉ ENCIMA, y se va sola al salir.
+   *
+   * Antes había que volver a pulsar el botón o pinchar fuera, que son dos
+   * gestos para deshacer uno. Ahora la paleta vive mientras la estés mirando.
+   *
+   * Los 260 ms de gracia no son adorno: entre el botón y el ramillete de
+   * colores el puntero cruza un par de píxeles de nada, y sin margen la paleta
+   * se cerraría justo en ese salto — el clásico menú que se escapa cuando vas a
+   * pulsarlo. Y si el ratón vuelve dentro de ese rato, se cancela el cierre.
+   */
+  const irse = () => {
+    quedarse();
+    gracia.current = window.setTimeout(() => {
+      gracia.current = null;
+      salida.cerrar();
+    }, 260);
+  };
+
   return (
-    <div className="paleta" ref={caja}>
+    <div
+      className="paleta"
+      ref={caja}
+      onPointerEnter={quedarse}
+      onPointerLeave={abierto ? irse : undefined}
+    >
       {salida.montado && (
         <div
-          className={`paleta__ramo${salida.cerrando ? " menu__lista--cerrando" : ""}`}
+          className={`paleta__ramo${salida.cerrando ? " paleta__ramo--cerrando" : ""}`}
           role="menu"
           onAnimationEnd={salida.alTerminar}
         >
@@ -107,6 +147,15 @@ export function SelectorColor({
         aria-expanded={abierto}
         aria-label="Cambiar el color de la aplicación"
         title="Cambiar el color de la aplicación"
+        /* Se abre también al acercarse: es un cambio de color, no una acción
+           con consecuencias, y pedir un clic para ENSEÑAR ocho puntos sobra. El
+           clic sigue funcionando para quien va con el teclado o con el dedo. */
+        onPointerEnter={(evento) => {
+          if (evento.pointerType !== "touch") {
+            quedarse();
+            setAbierto(true);
+          }
+        }}
         onClick={() => (abierto ? salida.cerrar() : setAbierto(true))}
       >
         <span className="paleta__punto" />

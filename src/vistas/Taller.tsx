@@ -670,6 +670,13 @@ export function Taller({
         escena();
         return;
       }
+      /* La medida, con las flechas. Con Shift para no pisar el salto de palabra
+         de Ctrl+← y Ctrl+→, que en un editor de texto es sagrado. */
+      if (evento.shiftKey && (evento.key === "ArrowRight" || evento.key === "ArrowLeft")) {
+        evento.preventDefault();
+        medida(evento.key === "ArrowRight" ? 1 : -1);
+        return;
+      }
     }
 
     if (evento.key === "Enter" && !evento.shiftKey) {
@@ -863,6 +870,24 @@ export function Taller({
 
   const ponerPrevia = (sitio: SitioPrevia) => onAjustes({ ...ajustes, previa: sitio });
 
+  /**
+   * LA MEDIDA, sin salir a Ajustes.
+   *
+   * «Medida» es como se llama en tipografía al ancho de la columna de texto, y
+   * se cuenta en caracteres porque es lo que de verdad importa: lo cómodo de
+   * leer está entre 45 y 75, y ahí es donde el ojo encuentra el principio de la
+   * línea siguiente sin buscarlo. Pero eso es una media — depende de la letra,
+   * del tamaño y de la pantalla, así que es de las cosas que se ajustan
+   * escribiendo, probando, no en un panel de ajustes al que hay que ir.
+   *
+   * De cuatro en cuatro: de uno en uno no se nota y no acabas nunca.
+   */
+  const medida = (pasos: number) =>
+    onAjustes({
+      ...ajustes,
+      anchoEditor: Math.min(110, Math.max(34, ajustes.anchoEditor + pasos * 4)),
+    });
+
   const accionesEscribir: Accion[] = [
     { clave: "b", nombre: "Negrita", icono: "negrita", atajo: "Ctrl+B", hacer: negrita },
     { clave: "i", nombre: "Cursiva", icono: "cursiva", atajo: "Ctrl+I", hacer: cursiva },
@@ -956,6 +981,23 @@ export function Taller({
                 ? "arriba"
                 : "oculta",
         }),
+    },
+    {
+      clave: "ancho-mas",
+      nombre: "Texto más ancho",
+      icono: "expandir",
+      atajo: "Ctrl+⇧+→",
+      corte: true,
+      ayuda:
+        "Ensancha la columna de texto. Se mide en caracteres por línea, que es lo que decide si el ojo encuentra la línea siguiente sin buscarla: lo cómodo suele estar entre 45 y 75.",
+      hacer: () => medida(1),
+    },
+    {
+      clave: "ancho-menos",
+      nombre: "Texto más estrecho",
+      icono: "encoger",
+      atajo: "Ctrl+⇧+←",
+      hacer: () => medida(-1),
     },
     { clave: "leer", nombre: "Leer el libro entero", icono: "libro", hacer: () => setLeyendo(true) },
     {

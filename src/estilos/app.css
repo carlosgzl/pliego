@@ -1569,17 +1569,73 @@
   gap: 0.2rem;
 }
 
-.puerta__lema {
+/* ── La cita de la puerta ─────────────────────────────────────────────────── */
+
+/*
+ * Donde había un lema fijo hay ahora una frase distinta cada vez.
+ *
+ * Va en romana y en cursiva —no en la sans de la interfaz— porque es literatura
+ * y no un rótulo: la letra tiene que decir «esto lo escribió alguien» antes de
+ * que se lea la primera palabra. Y con una comilla de apertura grande al margen,
+ * que es como se marca una cita en un libro desde hace cuatrocientos años.
+ */
+.cita {
+  position: relative;
   margin: 0;
-  font-size: clamp(1.7rem, 3.4vw, 2.6rem);
-  font-weight: 600;
-  line-height: 1.18;
-  letter-spacing: -0.03em;
+  max-width: 26rem;
 }
 
-.puerta__lema em {
+.cita__texto {
+  margin: 0;
+  font-family: var(--serif);
   font-style: italic;
+  font-size: clamp(1.35rem, 2.6vw, 1.95rem);
+  font-weight: 400;
+  line-height: 1.32;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.cita__texto::before {
+  content: "C";
+  position: absolute;
+  inset-inline-start: -0.62em;
+  inset-block-start: -0.22em;
+  font-size: 2.6em;
+  line-height: 1;
   color: var(--acento);
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+.cita__firma {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--acento-ink);
+}
+
+/* Un guion largo delante del autor: es como se firma una cita. */
+.cita__firma::before {
+  content: "";
+  width: 1.6rem;
+  height: 1px;
+  background: var(--acento);
+  opacity: 0.55;
+}
+
+.cita__obra {
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-style: italic;
+  color: var(--tenue);
 }
 
 .puerta__lista {
@@ -1673,21 +1729,29 @@
 /* ── Pantalla de inicio ───────────────────────────────────────────────────── */
 
 /*
- * La estantería se desplaza y nada más.
+ * EL PIE, ABAJO DEL TODO — y esta vez sin apretar nada.
  *
- * Aquí llegó a haber un `display: flex` en columna con el pie clavado al borde
- * de abajo. NO ESTABA PEDIDO: apretaba la pantalla de inicio contra la ventana
- * y él lo dijo en cuanto lo vio. El pie se queda donde termina el contenido,
- * que es donde termina una página, y lo que había que arreglar de él —que se
- * leía como un bloque suelto— estaba dentro del pie, no aquí.
+ * El primer intento fue una columna flex con `margin-top: auto` en el pie. El
+ * pie bajaba, sí, pero el contenido quedaba con `flex-shrink: 1` por defecto y
+ * la pantalla entera se sentía comprimida contra el marco de la ventana.
+ *
+ * La forma correcta es al revés: quien crece es EL CONTENIDO, no el hueco.
+ * `flex: 1 0 auto` en la caja de dentro significa «coge todo el espacio que
+ * sobre, y no encojas NUNCA»; el sobrante se convierte en aire dentro del
+ * bloque de contenido, justo encima del pie, y con la estantería llena la caja
+ * conserva su tamaño natural y se desplaza como siempre.
  */
 .inicio {
   flex: 1;
   overflow: auto;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .inicio__dentro {
+  /* Crece para empujar el pie abajo; no encoge jamás. */
+  flex: 1 0 auto;
   max-width: 64rem;
   margin: 0 auto;
   padding: 2.5rem 1.5rem 5rem;
@@ -1965,7 +2029,13 @@
   border: 1px solid var(--linea);
   background: var(--panel);
   box-shadow: 0 10px 30px -12px rgb(0 0 0 / 34%);
+  /* Nace y muere en su botón, que está a la derecha: sin esto la animación
+     parece que viene del centro de la nada. */
   animation: crecer var(--normal) var(--resorte);
+  transform-origin: right center;
+}
+
+.paleta__ramo--cerrando {
   transform-origin: right center;
 }
 
@@ -2277,6 +2347,148 @@
   margin-inline: 0.9rem;
 }
 
+/* ── La puerta: fuerza de la contraseña y requisitos ──────────────────────── */
+
+/*
+ * CUATRO TRAMOS QUE SE ENCIENDEN, no una barra que crece.
+ *
+ * Una barra que se alarga obliga al ojo a medir contra nada; cuatro huecos
+ * fijos que se van llenando se comparan con lo que ya se ha visto antes. Es la
+ * misma razón por la que un depósito de gasolina tiene marcas.
+ */
+.fuerza {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.fuerza__barra {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.25rem;
+}
+
+.fuerza__tramo {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--linea);
+  transition: background-color var(--normal) var(--sale);
+}
+
+/* Del rojo al verde pasando por el acento, que es el color de la casa y evita
+   el semáforo entero — un amarillo chillón aquí no pega con nada. */
+.fuerza__tramo--n1 {
+  background: var(--peligro);
+}
+
+.fuerza__tramo--n2 {
+  background: #b8863b;
+}
+
+.fuerza__tramo--n3 {
+  background: var(--acento);
+}
+
+.fuerza__tramo--n4 {
+  background: var(--bien);
+}
+
+.fuerza__nombre {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--tenue);
+}
+
+.fuerza__nombre--n0,
+.fuerza__nombre--n1 {
+  color: var(--peligro);
+}
+
+.fuerza__nombre--n3 {
+  color: var(--acento-ink);
+}
+
+.fuerza__nombre--n4 {
+  color: var(--bien);
+}
+
+/*
+ * Los requisitos se marcan solos.
+ *
+ * En gris mientras no se ha escrito nada —nadie falla en blanco—, en rojo si lo
+ * escrito no cumple, y en verde con su visto cuando cumple. Enterarse de las
+ * condiciones DESPUÉS de enviar el formulario es la peor forma de contarlas.
+ */
+.requisito {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--tenue);
+  transition: color var(--normal) var(--sale);
+}
+
+.requisito svg {
+  flex: none;
+  margin-top: 0.18rem;
+}
+
+.requisito--si {
+  color: var(--bien);
+}
+
+.requisito--no {
+  color: var(--peligro);
+}
+
+.entrada--mal {
+  border-color: var(--peligro);
+}
+
+.puerta__mayusculas {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.45rem;
+  font-size: 0.74rem;
+  color: var(--peligro);
+  animation: asomar var(--veloz) var(--sale);
+}
+
+/* «Ver» / «Ocultar», al ras de la etiqueta del campo. */
+.campo__accion {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-inline-start: auto;
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radio);
+  font-size: 0.7rem;
+  color: var(--tenue);
+  transition: color var(--veloz) var(--sale), background-color var(--veloz) var(--sale);
+}
+
+.campo__accion:hover {
+  color: var(--acento-ink);
+  background: var(--acento-tenue);
+}
+
+.puerta__legal {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+
+.puerta__legal svg {
+  flex: none;
+  margin-top: 0.2rem;
+  color: var(--bien);
+}
+
 /* ── El menú del botón derecho ────────────────────────────────────────────── */
 
 /*
@@ -2310,6 +2522,14 @@
 }
 
 /* La raya que agrupa: marcas arriba, estructura en medio, portapapeles abajo. */
+/* La misma raya en los menús de la barra: agrupa por familias sin necesidad de
+   escribir un título encima de cada grupo. */
+.menu__corte {
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--linea);
+}
+
 .menu-texto__corte {
   margin-top: 0.25rem;
   padding-top: 0.25rem;
