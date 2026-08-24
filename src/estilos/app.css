@@ -1953,6 +1953,46 @@
   }
 }
 
+/*
+ * EN EL MÓVIL SE VA LA MITAD IZQUIERDA, PERO LA CITA SE QUEDA.
+ *
+ * En una pantalla estrecha, poner la lista de lo que hace la aplicación encima
+ * del formulario obliga a bajar para llegar a los campos, y a quien viene a
+ * entrar eso le sobra. Pero esconderlo todo dejaba el teléfono con lo de
+ * siempre —dos campos y un botón— y sin la única cosa de esa pantalla que tiene
+ * algo que decir. Así que se rescata la cita sola, pequeña y encima del
+ * formulario, y se queda fuera el resto.
+ */
+@media (max-width: 59.99rem) {
+  .puerta__cara {
+    display: flex;
+    gap: 0;
+    padding: 2rem 1.5rem 0;
+    background: none;
+    border-right: 0;
+  }
+
+  .puerta__cara .puerta__marca,
+  .puerta__cara .puerta__lista {
+    display: none;
+  }
+
+  .puerta__cara .cita__texto {
+    font-size: 1.15rem;
+    line-height: 1.4;
+  }
+
+  .puerta__cara .cita__texto::before {
+    font-size: 2em;
+    inset-inline-start: -0.42em;
+  }
+
+  .puerta__cara .cita__firma {
+    margin-top: 0.6rem;
+    font-size: 0.66rem;
+  }
+}
+
 /* ── Pantalla de inicio ───────────────────────────────────────────────────── */
 
 /*
