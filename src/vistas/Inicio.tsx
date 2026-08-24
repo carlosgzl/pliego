@@ -34,6 +34,7 @@ export function Inicio({
   onBorrar,
   onAjustes,
   onRecargar,
+  onPlaza,
   onEntrar,
   onSalir,
 }: {
@@ -47,6 +48,8 @@ export function Inicio({
   onBorrar: (slug: string) => void;
   onAjustes: () => void;
   onRecargar: () => void;
+  /** Ir al escaparate público. */
+  onPlaza: () => void;
   onEntrar: () => void;
   onSalir: () => void;
 }) {
@@ -96,6 +99,13 @@ export function Inicio({
 
           <div className="inicio__acciones">
             {dentro && catalogo && <Origen catalogo={catalogo} onRecargar={onRecargar} />}
+            {/* La plaza está a la vista y no escondida en un menú: es la única
+                parte de esto que existe para los demás, y si no se ve no la
+                visita nadie. */}
+            <button type="button" className="boton boton--desnudo" onClick={onPlaza}>
+              <Icono nombre="libro" />
+              <span className="boton__texto">La plaza</span>
+            </button>
             <button type="button" className="boton boton--desnudo" onClick={onAjustes}>
               <Icono nombre="ajustes" />
               <span className="boton__texto">Ajustes</span>

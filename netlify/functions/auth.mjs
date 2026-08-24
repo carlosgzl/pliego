@@ -35,12 +35,36 @@ import {
   timingSafeEqual,
 } from "node:crypto";
 
-export const config = { path: "/api/auth/*" };
+/*
+ * DOS FAMILIAS DE RUTAS EN UNA SOLA FUNCIÓN, y es a propósito.
+ *
+ * `/api/auth/*` son las cuentas; `/api/plaza/*` es lo que se publica para que
+ * lo lea cualquiera. Podrían ser dos archivos, y sería más ordenado — pero
+ * entonces el segundo tendría que importar de aquí el token firmado, el acceso
+ * a Blobs y la comprobación de sesión, y ya sabemos cómo acaba eso: el
+ * empaquetador de Netlify se deja cosas fuera y la función revienta con un
+ * error sin traza. Un archivo que se basta a sí mismo no puede fallar así.
+ */
+export const config = { path: ["/api/auth/*", "/api/plaza/*"] };
 
 const DIAS = 30;
 const SCRYPT = { N: 16384, r: 8, p: 1, largo: 32 };
 /** Un almacén por cuenta; la clave es el nombre de usuario normalizado. */
 const ALMACEN = "pliego-cuentas";
+
+/*
+ * LÍMITES DE LA PLAZA. No son burocracia: es una superficie pública donde
+ * cualquiera con cuenta puede escribir, y sin topes un solo usuario podría
+ * llenar el almacén del sitio en una tarde.
+ */
+const PLAZA = {
+  /** Lo más largo que puede tener una obra publicada. Una novela larga cabe. */
+  tope: 900_000,
+  /** Cuántas puede tener publicadas a la vez una misma persona. */
+  porPersona: 20,
+  /** Cuántas caben en el escaparate. Las más antiguas salen de la lista. */
+  enPortada: 300,
+};
 
 const CABECERAS = {
   "content-type": "application/json; charset=utf-8",
@@ -107,6 +131,17 @@ async function leerBlob(clave) {
     throw new Error(`blobs ${respuesta.status}`);
   }
   return respuesta.json();
+}
+
+async function borrarBlob(clave) {
+  const ctx = contexto();
+  if (!ctx) {
+    return;
+  }
+  await fetch(direccion(ctx, clave), {
+    method: "DELETE",
+    headers: { authorization: `Bearer ${ctx.token}` },
+  }).catch(() => null);
 }
 
 async function escribirBlob(clave, valor) {
@@ -277,13 +312,153 @@ export function fundir(unoCrudo, otroCrudo) {
   return { libros, borrados: vivas };
 }
 
+/* ── La plaza: lo que se publica para que lo lea cualquiera ───────────────── */
+
+/**
+ * El escaparate: una sola lista con lo justo para pintar una portada.
+ *
+ * Se guarda aparte del texto de las obras a propósito. Quien entra en la plaza
+ * quiere ver qué hay, y eso son treinta portadas con su título y su autor; si
+ * la lista llevara dentro el texto de cada libro, abrir la plaza sería
+ * descargarse una biblioteca entera para leer treinta títulos.
+ */
+async function leerEscaparate() {
+  const guardado = await leerBlob("plaza/escaparate");
+  return Array.isArray(guardado?.obras) ? guardado.obras : [];
+}
+
+function escribirEscaparate(obras) {
+  /* Lo más nuevo primero, y con tope: una lista que crece sin límite acaba
+     siendo un blob de megas que se lee entero en cada visita. */
+  const orden = [...obras].sort((a, b) => (b.publicado ?? 0) - (a.publicado ?? 0));
+  return escribirBlob("plaza/escaparate", { obras: orden.slice(0, PLAZA.enPortada) });
+}
+
+/** La portada sin nada pesado dentro: solo el diseño. */
+function sinImagenes(portada) {
+  if (!portada || typeof portada !== "object") {
+    return null;
+  }
+  const { imagen: _fuera, elementos, ...resto } = portada;
+  return {
+    ...resto,
+    imagen: null,
+    elementos: Array.isArray(elementos)
+      ? elementos.filter((elemento) => elemento?.tipo === "texto").slice(0, 8)
+      : undefined,
+  };
+}
+
+/** Un identificador de obra: legible, único y que vale como clave de blob. */
+function idDeObra(usuario, slug) {
+  const limpio = String(slug)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+  return `${usuario}/${limpio || "obra"}`;
+}
+
+async function rutasDeLaPlaza(request, ruta) {
+  /* --- El escaparate, abierto a cualquiera ------------------------------- */
+  if (ruta === "" && request.method === "GET") {
+    return json({ obras: await leerEscaparate() });
+  }
+
+  /* --- Una obra, para leerla. También sin cuenta: de eso se trata -------- */
+  if (ruta === "obra" && request.method === "GET") {
+    const id = new URL(request.url).searchParams.get("id") ?? "";
+    const obra = await leerBlob(`plaza/o/${id.replace(/\//g, "~")}`);
+    return obra ? json(obra) : json({ error: "Esa obra ya no está publicada." }, 404);
+  }
+
+  /* --- Publicar. Aquí sí hace falta ser alguien -------------------------- */
+  if (ruta === "obra" && request.method === "PUT") {
+    const datos = comprobar(tokenDe(request));
+    if (!datos) {
+      return json({ error: "Hay que entrar para publicar." }, 401);
+    }
+    const cuerpo = await request.json().catch(() => null);
+    const contenido = typeof cuerpo?.contenido === "string" ? cuerpo.contenido : "";
+    const slug = String(cuerpo?.slug ?? "").trim();
+    if (!slug || contenido.length === 0) {
+      return json({ error: "Falta el libro." }, 400);
+    }
+    if (contenido.length > PLAZA.tope) {
+      return json({ error: "La obra es demasiado larga para publicarla aquí." }, 413);
+    }
+
+    const escaparate = await leerEscaparate();
+    const mias = escaparate.filter((obra) => obra.usuario === datos.u);
+    const id = idDeObra(datos.u, slug);
+    if (!mias.some((obra) => obra.id === id) && mias.length >= PLAZA.porPersona) {
+      return json(
+        { error: `Puedes tener ${PLAZA.porPersona} obras publicadas a la vez. Retira alguna.` },
+        409,
+      );
+    }
+
+    const ficha = {
+      id,
+      usuario: datos.u,
+      titulo: String(cuerpo?.titulo ?? "Sin título").slice(0, 160),
+      subtitulo: String(cuerpo?.subtitulo ?? "").slice(0, 200),
+      autor: String(cuerpo?.autor ?? "").slice(0, 120),
+      palabras: Number(cuerpo?.palabras) || 0,
+      /*
+       * La portada viaja como DISEÑO, no como imagen.
+       *
+       * El escaparate se pinta con el mismo componente que dibuja las portadas
+       * dentro de la aplicación, así que le basta con los colores, las letras y
+       * el material: unos cientos de bytes. Mandar la fotografía de fondo sería
+       * meter cincuenta kB por obra en una sola lista que se descarga entera
+       * cada vez que alguien entra en la plaza — trescientas obras, quince
+       * megas. La fotografía se queda en la obra, y se ve al abrirla.
+       */
+      portada: sinImagenes(cuerpo?.portada),
+      publicado: Date.now(),
+    };
+
+    await escribirBlob(`plaza/o/${id.replace(/\//g, "~")}`, { ...ficha, contenido });
+    await escribirEscaparate([...escaparate.filter((obra) => obra.id !== id), ficha]);
+    return json({ ok: true, id });
+  }
+
+  /* --- Retirar. Solo lo tuyo -------------------------------------------- */
+  if (ruta === "obra" && request.method === "DELETE") {
+    const datos = comprobar(tokenDe(request));
+    if (!datos) {
+      return json({ error: "Hay que entrar." }, 401);
+    }
+    const id = new URL(request.url).searchParams.get("id") ?? "";
+    if (!id.startsWith(`${datos.u}/`)) {
+      return json({ error: "Esa obra no es tuya." }, 403);
+    }
+    await borrarBlob(`plaza/o/${id.replace(/\//g, "~")}`);
+    await escribirEscaparate((await leerEscaparate()).filter((obra) => obra.id !== id));
+    return json({ ok: true });
+  }
+
+  return json({ error: "No existe." }, 404);
+}
+
 /* ── Rutas ────────────────────────────────────────────────────────────────── */
 
 export default async function handler(request) {
-  const ruta = new URL(request.url).pathname.replace(/^\/api\/auth\/?/, "").replace(/\/+$/, "");
+  const camino = new URL(request.url).pathname;
+  const esPlaza = camino.startsWith("/api/plaza");
+  const ruta = camino
+    .replace(/^\/api\/(auth|plaza)\/?/, "")
+    .replace(/\/+$/, "");
 
   if (!contexto()) {
-    return json({ error: "El almacén de cuentas no está disponible." }, 503);
+    return json({ error: "El almacén no está disponible." }, 503);
+  }
+
+  if (esPlaza) {
+    return rutasDeLaPlaza(request, ruta);
   }
 
   /* --- Quién soy --------------------------------------------------------- */

@@ -33,17 +33,35 @@ import { avisar, Avisos } from "@/ui/Avisos";
 import { SelectorColor } from "@/ui/Pie";
 import { Entrada } from "@/vistas/Entrada";
 import { Inicio } from "@/vistas/Inicio";
+import { Plaza } from "@/vistas/Plaza";
 import { PanelAjustes } from "@/vistas/PanelAjustes";
 import { Taller } from "@/vistas/Taller";
 
-function libroDeLaUrl(): string | null {
+/**
+ * Qué hay que enseñar, leído de la dirección.
+ *
+ * Sigue sin haber enrutador —una aplicación de escribir tiene un sitio donde
+ * estás y otro del que vienes—, pero la plaza obliga a que el hash signifique
+ * DOS cosas: `#/Mi-libro` es un libro tuyo y `#/plaza/quien/obra` es algo
+ * publicado. Con ese prefijo un enlace a una obra se puede mandar por mensaje y
+ * abre donde tiene que abrir, que es la mitad de para qué sirve publicar.
+ */
+function deLaUrl(): { libro: string | null; plaza: boolean; obra: string | null } {
   const hash = decodeURIComponent(window.location.hash.replace(/^#\/?/, ""));
-  return hash.length > 0 ? hash : null;
+  if (hash === "plaza") {
+    return { libro: null, plaza: true, obra: null };
+  }
+  if (hash.startsWith("plaza/")) {
+    return { libro: null, plaza: true, obra: hash.slice("plaza/".length) || null };
+  }
+  return { libro: hash.length > 0 ? hash : null, plaza: false, obra: null };
 }
 
 export function App() {
   const [ajustes, setAjustes] = useState<Ajustes>(leerAjustes);
-  const [abierto, setAbierto] = useState<string | null>(libroDeLaUrl);
+  const [abierto, setAbierto] = useState<string | null>(() => deLaUrl().libro);
+  const [enPlaza, setEnPlaza] = useState(() => deLaUrl().plaza);
+  const [obraPlaza, setObraPlaza] = useState<string | null>(() => deLaUrl().obra);
   /** El título del libro abierto, para la pestaña. Lo dice el taller. */
   const [tituloPestana, setTituloPestana] = useState<string | null>(null);
   const [catalogo, setCatalogo] = useState<Catalogo | null>(null);
@@ -202,9 +220,42 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    const alVolver = () => setAbierto(libroDeLaUrl());
+    const alVolver = () => {
+      const donde = deLaUrl();
+      setAbierto(donde.libro);
+      setEnPlaza(donde.plaza);
+      setObraPlaza(donde.obra);
+    };
+    /* `popstate` cubre el botón de atrás; `hashchange` cubre que alguien pegue
+       una dirección con hash en la barra o pulse un enlace a `#/plaza` desde
+       fuera. Sin el segundo, un enlace compartido no lleva a ninguna parte
+       hasta que se recarga la página a mano. */
     window.addEventListener("popstate", alVolver);
-    return () => window.removeEventListener("popstate", alVolver);
+    window.addEventListener("hashchange", alVolver);
+    return () => {
+      window.removeEventListener("popstate", alVolver);
+      window.removeEventListener("hashchange", alVolver);
+    };
+  }, []);
+
+  /* Ir a la plaza, o a una obra suya. Con `pushState` para que el botón de
+     atrás del navegador haga lo que se espera. */
+  const irAPlaza = useCallback((obra: string | null) => {
+    setAbierto(null);
+    setEnPlaza(true);
+    setObraPlaza(obra);
+    setTituloPestana(obra ? null : "La plaza");
+    const hash = obra ? `#/plaza/${obra}` : "#/plaza";
+    if (window.location.hash !== hash) {
+      window.history.pushState(null, "", hash);
+    }
+  }, []);
+
+  const salirDeLaPlaza = useCallback(() => {
+    setEnPlaza(false);
+    setObraPlaza(null);
+    setTituloPestana(null);
+    window.history.pushState(null, "", "#");
   }, []);
 
   const salirDelTaller = useCallback(() => {
@@ -258,6 +309,22 @@ export function App() {
 
   const enMuestra = abierto === SLUG_MUESTRA || (!dentro && abierto !== null);
 
+  /*
+   * LA PLAZA VA ANTES QUE LA PUERTA, y es lo que la hace pública.
+   *
+   * Si estuviera detrás del formulario de entrada, un enlace a una obra
+   * publicada mandaría al lector a un campo de contraseña — y entonces
+   * publicar no serviría de nada. Cualquiera que llegue con el enlace lee.
+   */
+  if (enPlaza) {
+    return (
+      <div className="app">
+        <Plaza obraAbierta={obraPlaza} onAbrir={irAPlaza} onVolver={salirDeLaPlaza} />
+        <Avisos />
+      </div>
+    );
+  }
+
   /* Sin sesión y sin haber pedido pasar de visita, lo único que hay es la
      puerta. Ni estantería, ni libro, ni una petición a la red. */
   if (!dentro && !visita) {
@@ -299,6 +366,7 @@ export function App() {
             onBorrar={(slug) => conSesion(() => void borrar(slug))}
             onAjustes={() => setAjustando(true)}
             onRecargar={() => void sincronizarYa(true).then(() => recargar(true))}
+            onPlaza={() => irAPlaza(null)}
             onEntrar={() => setVisita(false)}
             onSalir={() => {
               salir();

@@ -2180,6 +2180,60 @@
   text-underline-offset: 2px;
 }
 
+/* ── Adónde más se puede llevar un libro ──────────────────────────────────── */
+
+.sitios {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.6rem;
+}
+
+/*
+ * Enlaces que se van de la casa, y por eso se ven como lo que son.
+ *
+ * Con una flechita de salida al lado del nombre, para que nadie pulse creyendo
+ * que sigue dentro de Pliego. Es la cortesía mínima de un enlace externo.
+ */
+.sitio-externo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  background: var(--panel);
+  color: var(--ink-suave);
+  transition:
+    border-color var(--veloz) var(--sale),
+    transform var(--veloz) var(--sale),
+    box-shadow var(--normal) var(--sale);
+}
+
+.sitio-externo:hover {
+  border-color: var(--acento);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px -18px rgb(0 0 0 / 45%);
+}
+
+.sitio-externo__nombre {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.sitio-externo__nombre svg {
+  opacity: 0.45;
+}
+
+.sitio-externo__que {
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--tenue);
+}
+
 /* Seguir donde lo dejaste. */
 .seguir {
   display: flex;

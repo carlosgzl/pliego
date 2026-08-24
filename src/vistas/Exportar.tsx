@@ -16,15 +16,189 @@
  * they do not like, and half the design on this screen would not survive.
  */
 
-import { useState } from "react";
-import { partirEnBloques } from "@/nucleo/bloques";
+import { useEffect, useState } from "react";
+import { contarPalabras, partirEnBloques } from "@/nucleo/bloques";
 import { medidaMm, margenesMm } from "@/nucleo/geometria";
 import { sinMarcas, trozos } from "@/nucleo/inline";
 import { componer, type Meta } from "@/nucleo/libro";
 import { numeroCapituloDe } from "@/nucleo/pagina";
+import { idPrevisto, leerObra, publicar as publicarObra, retirar } from "@/datos/plaza";
+import { leerSesion } from "@/datos/sesion";
 import { avisar } from "@/ui/Avisos";
 import { Icono } from "@/ui/Icono";
 import { useSalida } from "@/ui/useSalida";
+
+/**
+ * Publicar en la plaza, o retirarlo.
+ *
+ * VIVE EN «EXPORTAR» Y NO EN UN BOTÓN DE LA BARRA, y es una decisión. Publicar
+ * es sacar el libro de aquí, igual que descargarlo o imprimirlo: pertenece al
+ * mismo cajón mental. Un botón propio en la barra del taller lo pondría a la
+ * misma altura que negrita o cursiva, y sería mentira — esto no se hace
+ * mientras se escribe, se hace cuando ya se ha escrito.
+ *
+ * SE DICE CLARAMENTE QUÉ SIGNIFICA antes de pulsar. Lo que sale de aquí lo
+ * puede leer cualquiera con el enlace, sin cuenta y sin permiso; eso no puede
+ * ir en letra pequeña debajo. Y se puede retirar en cualquier momento, que es
+ * lo otro que hay que saber antes de decidirse.
+ */
+function Publicar({ meta, cuerpo, slug }: { meta: Meta; cuerpo: string; slug: string }) {
+  const sesion = leerSesion();
+  const [estado, setEstado] = useState<"quieto" | "yendo">("quieto");
+  const [publicada, setPublicada] = useState<string | null>(null);
+  const [confirmando, setConfirmando] = useState(false);
+
+  /* Si esta obra ya está en la plaza se sabe sin preguntar a nadie: el
+     identificador se calcula igual aquí y en el servidor. */
+  const id = sesion ? idPrevisto(sesion.usuario, slug) : null;
+  const yaEsta = publicada ?? null;
+
+  useEffect(() => {
+    if (!id) {
+      return;
+    }
+    let vivo = true;
+    void leerObra(id)
+      .then((obra) => vivo && setPublicada(obra ? id : null))
+      .catch(() => {
+        /* Sin red no se sabe, y no saberlo no es un error que merezca un
+           cartel rojo: el botón dirá «Publicar» y publicar dos veces la misma
+           obra la sustituye, que es justo lo que se querría. */
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [id]);
+
+  if (!sesion) {
+    return (
+      <div className="grupo">
+        <span className="grupo__titulo">La plaza</span>
+        <p className="campo__nota">
+          Entra con tu cuenta y podrás publicar este libro para que lo lea cualquiera.
+        </p>
+      </div>
+    );
+  }
+
+  const mandar = async () => {
+    setEstado("yendo");
+    try {
+      const nuevo = await publicarObra({
+        slug,
+        titulo: meta.titulo,
+        subtitulo: meta.subtitulo,
+        autor: meta.autor,
+        palabras: contarPalabras(cuerpo),
+        portada: meta.portada,
+        contenido: componer(meta, cuerpo),
+      });
+      setPublicada(nuevo);
+      setConfirmando(false);
+      avisar("Publicado en la plaza.");
+    } catch (error) {
+      avisar((error as Error).message, "error");
+    } finally {
+      setEstado("quieto");
+    }
+  };
+
+  const quitar = async () => {
+    if (!yaEsta) {
+      return;
+    }
+    setEstado("yendo");
+    try {
+      await retirar(yaEsta);
+      setPublicada(null);
+      avisar("Retirado de la plaza.");
+    } catch (error) {
+      avisar((error as Error).message, "error");
+    } finally {
+      setEstado("quieto");
+    }
+  };
+
+  return (
+    <div className="grupo">
+      <span className="grupo__titulo">La plaza</span>
+
+      {yaEsta ? (
+        <>
+          <div className="salvo">
+            <span className="salvo__punto" />
+            <div className="salvo__texto">
+              <strong>Está publicado</strong>
+              <p className="campo__nota">
+                Cualquiera puede leerlo con este enlace, sin cuenta. Vuelve a publicar cuando
+                quieras y se actualiza con lo que hayas escrito desde entonces.
+              </p>
+            </div>
+          </div>
+          <label className="campo">
+            <span className="campo__etiqueta">Enlace</span>
+            <input
+              className="entrada"
+              readOnly
+              value={`${window.location.origin}/#/plaza/${yaEsta}`}
+              onFocus={(evento) => evento.currentTarget.select()}
+            />
+          </label>
+          <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className="boton boton--principal"
+              disabled={estado === "yendo"}
+              onClick={() => void mandar()}
+            >
+              <Icono nombre="descargar" /> Actualizar
+            </button>
+            <button
+              type="button"
+              className="boton boton--peligro"
+              disabled={estado === "yendo"}
+              onClick={() => void quitar()}
+            >
+              <Icono nombre="papelera" /> Retirar
+            </button>
+          </div>
+        </>
+      ) : confirmando ? (
+        <>
+          <p className="campo__nota">
+            <strong>Lo que va a pasar:</strong> se sube una copia de este libro tal y como está
+            ahora —con su portada y su diseño— y aparece en la plaza. Lo podrá leer{" "}
+            <strong>cualquiera con el enlace</strong>, sin cuenta y sin permiso. No se sube nada de
+            lo que escribas después salvo que vuelvas a publicar, y puedes retirarlo cuando quieras.
+          </p>
+          <div style={{ display: "flex", gap: "0.4rem" }}>
+            <button
+              type="button"
+              className="boton boton--principal"
+              disabled={estado === "yendo"}
+              onClick={() => void mandar()}
+            >
+              {estado === "yendo" ? "Publicando…" : "Sí, publicarlo"}
+            </button>
+            <button type="button" className="boton" onClick={() => setConfirmando(false)}>
+              Ahora no
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="campo__nota">
+            Enseñarlo en la plaza, para que lo lea quien quiera. Se sube una copia; lo que escribas
+            después no cambia lo que otros leen hasta que vuelvas a publicar.
+          </p>
+          <button type="button" className="boton" onClick={() => setConfirmando(true)}>
+            <Icono nombre="libro" /> Publicar en la plaza
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
 
 export function Exportar({
   meta,
@@ -79,6 +253,8 @@ export function Exportar({
           <Icono nombre="cerrar" />
         </button>
       </div>
+
+      <Publicar meta={meta} cuerpo={cuerpo} slug={slug} />
 
       <div className="grupo">
         <span className="grupo__titulo">Markdown</span>
