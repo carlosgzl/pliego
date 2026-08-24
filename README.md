@@ -123,6 +123,16 @@ pequeño, y quien acaba de terminar un libro merece saberlo.
 
 ## La portada
 
+**Tiene su propia pantalla**, no un panel lateral: diseñar una cubierta en una
+columna de 22 rem, con la portada del tamaño de un sello, es hacerlo a ciegas.
+Y el libro se ve **como un objeto de cuatro caras** —delante, detrás, lomo y
+canto—, girándolo con el ratón, porque el lomo es lo único que se ve de un libro
+en una estantería y hasta ahora no se podía ni escribir.
+
+Tres vistas: **en volumen** para decidir si el conjunto funciona, **extendida**
+—contraportada, lomo y portada, como sale de la imprenta— para trabajar sin
+perspectiva, y **solo la tapa** para colocar cosas al milímetro.
+
 Se diseña encima de la portada de verdad — el mismo componente que pinta la
 miniatura de la estantería y el PDF—, así que lo que se coloca aquí está
 colocado ahí.
@@ -135,6 +145,11 @@ colocado ahí.
   dibujadas con degradados de CSS y un `feTurbulence`; **ninguna es una imagen**,
   porque la portada viaja dentro del `.md` y un escaneo de tela serían cientos
   de kB metidos en un archivo que tiene que abrirse en Obsidian.
+- **La fotografía se recorta**: se arrastra para elegir qué parte se ve y se
+  amplía con un mando. No se reescribe la imagen — se guardan tres números que
+  el navegador aplica, así que pesa nada y siempre se puede volver atrás.
+- **Contraportada y lomo**: la sinopsis y el texto del canto, que son la mitad
+  de lo que hace que un libro parezca un libro.
 - **Cosas puestas a mano**: textos e imágenes donde se quiera, arrastrando o con
   una rejilla de nueve sitios. Todo en **porcentaje y en `em`** — nunca en
   píxeles— que es lo que hace que el mismo objeto caiga en el mismo sitio a los

@@ -2239,6 +2239,143 @@
   text-underline-offset: 2px;
 }
 
+/* ── El taller de portada ─────────────────────────────────────────────────── */
+
+/*
+ * OCUPA LA PANTALLA, Y ESE ES TODO EL ARREGLO.
+ *
+ * Esto vivía en el panel lateral de 22 rem: la portada salía del tamaño de un
+ * sello y debajo había quince controles apilados. Diseñar una cubierta así no
+ * es difícil, es imposible — se hacía a ciegas. Aquí el libro está en grande a
+ * la izquierda y los mandos a la derecha, que es como está montado cualquier
+ * programa de diseño desde hace treinta años.
+ */
+.taller-portada {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  background: var(--ground);
+}
+
+.taller-portada__barra {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0.9rem;
+  border-bottom: 1px solid var(--linea);
+  background: var(--panel);
+  flex: none;
+}
+
+.taller-portada__centro {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+
+.taller-portada__cuerpo {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/*
+ * El lienzo: fondo neutro y el libro flotando en medio.
+ *
+ * Un gris ligeramente distinto del de la aplicación, porque una portada se
+ * juzga contra un fondo que no compita: sobre el mismo color de la interfaz no
+ * se sabe dónde acaba la tapa.
+ */
+.taller-portada__lienzo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem 1.5rem;
+  overflow: auto;
+  background:
+    radial-gradient(ellipse at 50% 35%, var(--panel-alto) 0%, var(--ground) 70%);
+}
+
+.taller-portada__pista {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--tenue);
+  text-align: center;
+}
+
+.taller-portada__mandos {
+  width: min(24rem, 42vw);
+  flex: none;
+  padding: 1.25rem;
+  border-inline-start: 1px solid var(--linea);
+  background: var(--panel);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.lienzo--grande {
+  width: min(22rem, 60vh);
+}
+
+/* ── El encuadre de la foto ───────────────────────────────────────────────── */
+
+.encuadre {
+  position: relative;
+  width: 8rem;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.encuadre:active {
+  cursor: grabbing;
+}
+
+.encuadre__pista {
+  position: absolute;
+  inset-block-end: -1.2rem;
+  inset-inline: 0;
+  text-align: center;
+  font-size: 0.62rem;
+  color: var(--tenue);
+}
+
+/*
+ * En un teléfono no caben dos columnas: el libro arriba y los mandos debajo.
+ * El libro se queda pegado arriba al desplazar, que es lo que permite tocar un
+ * control y ver el efecto sin subir.
+ */
+@media (max-width: 60rem) {
+  .taller-portada__cuerpo {
+    flex-direction: column;
+    overflow: auto;
+  }
+
+  .taller-portada__lienzo {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    flex: none;
+    min-height: 46vh;
+    padding: 1rem;
+    border-bottom: 1px solid var(--linea);
+  }
+
+  .taller-portada__mandos {
+    width: 100%;
+    border-inline-start: 0;
+    overflow: visible;
+  }
+}
+
 /* ── Los papeles ──────────────────────────────────────────────────────────── */
 
 /*

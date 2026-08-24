@@ -538,3 +538,244 @@
   outline: 1.5px dashed var(--acento);
   outline-offset: 3px;
 }
+
+/* ── El libro en volumen ──────────────────────────────────────────────────── */
+
+/*
+ * CUATRO CARAS DE VERDAD, con CSS y sin bibliotecas.
+ *
+ * `perspective` en la escena y `preserve-3d` en la caja: a partir de ahí, cada
+ * cara se gira a su sitio con `rotateY` y se separa del centro con
+ * `translateZ`. La de delante es el componente de portada de siempre, así que
+ * lo que gira es exactamente lo que se imprime — no una imitación que se
+ * parezca.
+ *
+ * La perspectiva es LARGA (2200 px) a propósito. Una corta da un efecto de gran
+ * angular que deforma el título y hace que el libro parezca de juguete; larga,
+ * el objeto se lee como un libro fotografiado con teleobjetivo, que es como se
+ * fotografían los libros.
+ */
+.escena3d {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.libro3d {
+  perspective: 2200px;
+  perspective-origin: 50% 40%;
+  padding: 2.5rem 0 3rem;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.libro3d:active {
+  cursor: grabbing;
+}
+
+.libro3d__caja {
+  position: relative;
+  width: var(--ancho);
+  height: var(--alto);
+  transform-style: preserve-3d;
+  transform: rotateX(var(--inclinacion)) rotateY(var(--giro));
+  /* Sin transición: se arrastra, y una transición sobre algo que sigue al ratón
+     lo convierte en un objeto con retardo. La hay solo al soltar el mando. */
+  transition: transform var(--veloz) linear;
+}
+
+.libro3d__cara {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  backface-visibility: hidden;
+  background: var(--portada-color);
+  color: var(--portada-tinta);
+  font-family: var(--portada-fuente);
+}
+
+.libro3d__cara--frente {
+  transform: translateZ(calc(var(--grosor) / 2));
+  border-radius: 0 3px 3px 0;
+  box-shadow: inset 6px 0 14px -8px rgb(0 0 0 / 55%);
+}
+
+.libro3d__cara--frente .portada {
+  height: 100%;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.libro3d__cara--contra {
+  transform: rotateY(180deg) translateZ(calc(var(--grosor) / 2));
+  border-radius: 3px 0 0 3px;
+  box-shadow: inset -6px 0 14px -8px rgb(0 0 0 / 55%);
+}
+
+/*
+ * El lomo.
+ *
+ * Ancho `--grosor`, girado noventa grados y empujado hasta el borde izquierdo.
+ * El texto va en vertical porque es como va en un libro: en España se lee de
+ * arriba abajo, así que `writing-mode` vertical y sin darle la vuelta.
+ */
+.libro3d__cara--lomo {
+  width: var(--grosor);
+  left: calc(var(--grosor) / -2);
+  transform: rotateY(-90deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 12px -4px rgb(0 0 0 / 45%);
+}
+
+.lomo__texto {
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 88%;
+  font-size: min(0.62rem, calc(var(--grosor) * 0.55));
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+/*
+ * El canto: el borde de las hojas.
+ *
+ * Rayas de un píxel en dos cremas que se alternan. Sin esto el libro es una
+ * caja de color plano y se le nota lo falso al instante; con ello se lee como
+ * papel apilado sin que haya que explicarlo.
+ */
+.libro3d__cara--canto,
+.libro3d__cara--cabeza,
+.libro3d__cara--pie {
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      #f4f1e8 0 1px,
+      #ded8c9 1px 2px
+    );
+  box-shadow: inset 0 0 10px -3px rgb(0 0 0 / 40%);
+}
+
+.libro3d__cara--canto {
+  width: var(--grosor);
+  left: calc(var(--ancho) - var(--grosor) / 2);
+  transform: rotateY(90deg);
+}
+
+.libro3d__cara--cabeza {
+  height: var(--grosor);
+  top: calc(var(--grosor) / -2);
+  transform: rotateX(90deg);
+  background: repeating-linear-gradient(to right, #f4f1e8 0 1px, #ded8c9 1px 2px);
+}
+
+.libro3d__cara--pie {
+  height: var(--grosor);
+  top: calc(var(--alto) - var(--grosor) / 2);
+  transform: rotateX(-90deg);
+  background: repeating-linear-gradient(to right, #f4f1e8 0 1px, #ded8c9 1px 2px);
+}
+
+.escena3d__mandos {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: min(22rem, 100%);
+}
+
+.escena3d__mandos .deslizador {
+  flex: 1;
+}
+
+/* ── La contraportada ─────────────────────────────────────────────────────── */
+
+.contra {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  padding: 12% 11%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1em;
+}
+
+.contra__texto {
+  margin: 0;
+  font-size: 0.58rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow: hidden;
+}
+
+.contra__vacia {
+  margin: 0;
+  font-size: 0.55rem;
+  line-height: 1.55;
+  opacity: 0.4;
+  font-style: italic;
+}
+
+.contra__autor {
+  font-size: 0.5rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+/* ── La cubierta extendida ────────────────────────────────────────────────── */
+
+/*
+ * Como sale de la imprenta: contraportada, lomo y portada, de izquierda a
+ * derecha. En plano se ve todo a la vez y a tamaño real, sin perspectiva que
+ * deforme las letras — para trabajar es mejor que la vista en volumen, que
+ * sirve para decidir si el conjunto funciona.
+ */
+.cubierta {
+  display: flex;
+  align-items: stretch;
+  box-shadow: var(--hoja-sombra);
+  background: var(--portada-color);
+  color: var(--portada-tinta);
+  font-family: var(--portada-fuente);
+  max-width: 100%;
+}
+
+.cubierta__cara {
+  position: relative;
+  flex: none;
+  overflow: hidden;
+}
+
+.cubierta__cara--lomo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-inline: 1px dashed rgb(255 255 255 / 25%);
+}
+
+.cubierta__cara--frente .portada {
+  height: 100%;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* El rótulo de cada cara, fuera del papel: dice qué es sin ensuciar el diseño. */
+.cubierta__rotulo {
+  position: absolute;
+  inset-block-end: -1.35rem;
+  inset-inline: 0;
+  text-align: center;
+  font-family: var(--ui);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--tenue);
+  white-space: nowrap;
+}

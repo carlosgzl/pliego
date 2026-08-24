@@ -54,6 +54,23 @@ export function Portada({
           className={`portada__imagen portada__imagen--${portada.colocacion}`}
           src={portada.imagen}
           alt=""
+          /*
+           * El recorte, sin tocar el archivo.
+           *
+           * `object-position` elige qué punto de la foto queda centrado dentro
+           * del hueco, y la escala la amplía. Entre los dos se encuadra una
+           * imagen guardando TRES NÚMEROS en lugar de reescribir la fotografía:
+           * pesa nada dentro del .md y, sobre todo, siempre se puede volver
+           * atrás. Recortar de verdad, tirando píxeles, es irreversible.
+           */
+          style={
+            portada.encuadre
+              ? {
+                  objectPosition: `${portada.encuadre.x}% ${portada.encuadre.y}%`,
+                  transform: `scale(${portada.encuadre.zoom})`,
+                }
+              : undefined
+          }
         />
       )}
       {portada.imagen && completa && <div className="portada__velo" />}

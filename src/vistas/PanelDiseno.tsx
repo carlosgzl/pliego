@@ -22,7 +22,6 @@
 import { useRef, useState, type ChangeEvent } from "react";
 import { Segmentado } from "@/ui/Segmentado";
 import { useSalida } from "@/ui/useSalida";
-import { contarPalabras } from "@/nucleo/bloques";
 import { FUENTES, GRUPOS_FUENTE, pilaDe } from "@/nucleo/fuentes";
 import { FORMATOS, MARGENES, juzgarMedida, medidaEnCaracteres } from "@/nucleo/geometria";
 import type { Diseno, Meta, Portada as TipoPortada } from "@/nucleo/libro";
@@ -31,7 +30,7 @@ import { avisar } from "@/ui/Avisos";
 import { Icono } from "@/ui/Icono";
 import { MiniPagina } from "./MiniPagina";
 import { prepararImagen } from "./Portada";
-import { Elementos, LienzoPortada, Material, Plantillas } from "./PortadaTaller";
+import { LienzoPortada } from "./PortadaTaller";
 
 type Pestana = "estilo" | "letra" | "pagina" | "portada";
 
@@ -46,11 +45,14 @@ export function PanelDiseno({
   meta,
   cuerpo,
   onCambiar,
+  onTallerPortada,
   onCerrar,
 }: {
   meta: Meta;
   cuerpo: string;
   onCambiar: (meta: Meta) => void;
+  /** Abrir el taller de portada, que ocupa la pantalla. */
+  onTallerPortada: () => void;
   onCerrar: () => void;
 }) {
   const [pestana, setPestana] = useState<Pestana>("estilo");
@@ -149,9 +151,7 @@ export function PanelDiseno({
           {pestana === "portada" && (
             <PortadaAjustes
               meta={meta}
-              cuerpo={cuerpo}
-              elegido={elegido}
-              onElegir={setElegido}
+              onTallerPortada={onTallerPortada}
               onCambiar={onCambiar}
               onCambiarPortada={cambiarPortada}
             />
@@ -773,17 +773,13 @@ const ESTILOS_PORTADA: [TipoPortada["diseno"], string, string][] = [
 
 function PortadaAjustes({
   meta,
-  cuerpo,
-  elegido,
-  onElegir,
+  onTallerPortada,
   onCambiar,
   onCambiarPortada,
 }: {
   meta: Meta;
-  /** Solo para contar palabras: la recomendación mira lo largo que va el libro. */
-  cuerpo: string;
-  elegido: string | null;
-  onElegir: (id: string | null) => void;
+  /** Abrir el taller grande, que es donde se diseña de verdad. */
+  onTallerPortada: () => void;
   onCambiar: (meta: Meta) => void;
   onCambiarPortada: (cambios: Partial<TipoPortada>) => void;
 }) {
@@ -805,20 +801,24 @@ function PortadaAjustes({
 
   return (
     <>
-      <Plantillas
-        meta={meta}
-        palabras={contarPalabras(cuerpo)}
-        onAplicar={(portada) => onCambiar({ ...meta, portada })}
-      />
-
-      <Elementos
-        portada={portada}
-        elegido={elegido}
-        onElegir={onElegir}
-        onCambiar={(elementos) => onCambiarPortada({ elementos })}
-      />
-
-      <Material portada={portada} onCambiar={onCambiarPortada} />
+      {/*
+        * LO GORDO DE LA PORTADA VIVE EN SU PROPIA PANTALLA.
+        *
+        * Aquí quedan los ajustes finos —estilo, colores, las tres letras— que
+        * son los que uno retoca de pasada mientras escribe. Diseñar la cubierta
+        * entera en esta columna de 22 rem era hacerlo a ciegas, con la portada
+        * del tamaño de un sello: para eso está el taller, que ocupa la pantalla
+        * y enseña el libro en volumen.
+        */}
+      <div className="grupo">
+        <button type="button" className="boton boton--principal" onClick={onTallerPortada}>
+          <Icono nombre="expandir" /> Abrir el taller de portada
+        </button>
+        <p className="campo__nota">
+          A pantalla completa, con el libro en volumen —lomo y contraportada incluidos—, la
+          fotografía recortable y todo lo que se pueda poner encima.
+        </p>
+      </div>
 
       <div className="grupo">
         <span className="grupo__titulo">Estilo</span>

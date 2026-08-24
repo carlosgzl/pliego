@@ -90,6 +90,7 @@ import { ListaCapitulos } from "./ListaCapitulos";
 import { MenuTexto, type AccionTexto, type SitioMenu } from "./MenuTexto";
 import { Resaltado, TOPE_RESALTADO } from "./Manuscrito";
 import { PanelDiseno } from "./PanelDiseno";
+import { PantallaPortada } from "./PantallaPortada";
 import { Lector } from "./Lector";
 import { Exportar } from "./Exportar";
 
@@ -139,6 +140,9 @@ export function Taller({
   const [pagina, setPagina] = useState(1);
   const [paginas, setPaginas] = useState(1);
   const [panel, setPanel] = useState<"ninguno" | "diseno" | "exportar">("ninguno");
+  /* La portada tiene pantalla propia: en un panel lateral de 22 rem no se puede
+     diseñar una cubierta, se hace a ciegas. */
+  const [enPortada, setEnPortada] = useState(false);
   const [leyendo, setLeyendo] = useState(false);
   /*
    * El modo escritura se guarda en los ajustes, no en un estado local: quien
@@ -1165,6 +1169,12 @@ export function Taller({
             <MenuBarra etiqueta="Letra" icono="cursiva" acciones={accionesLetra} />
             <MenuBarra etiqueta="Ver" icono="ojo" acciones={accionesVer} />
             <BotonBarra
+              nombre="Portada"
+              icono="libro"
+              puesto={enPortada}
+              onClick={() => setEnPortada(true)}
+            />
+            <BotonBarra
               nombre="Diseño"
               icono="ajustes"
               puesto={panel === "diseno"}
@@ -1285,6 +1295,10 @@ export function Taller({
               setEstado("escribiendo");
               onTitulo(siguiente.titulo);
             }}
+            onTallerPortada={() => {
+              setPanel("ninguno");
+              setEnPortada(true);
+            }}
             onCerrar={() => setPanel("ninguno")}
           />
         )}
@@ -1352,6 +1366,19 @@ export function Taller({
           cabecera={<PalabrasSeleccionadas area={area.current} />}
           acciones={accionesTexto}
           onCerrar={() => setMenuTexto(null)}
+        />
+      )}
+
+      {enPortada && (
+        <PantallaPortada
+          meta={meta}
+          cuerpo={cuerpo}
+          onCambiar={(siguiente) => {
+            setMeta(siguiente);
+            setEstado("escribiendo");
+            onTitulo(siguiente.titulo);
+          }}
+          onCerrar={() => setEnPortada(false)}
         />
       )}
 

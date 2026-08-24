@@ -115,6 +115,38 @@ export interface Portada {
    * Ausente o vacío significa una portada como las de antes.
    */
   elementos?: ElementoPortada[];
+
+  /*
+   * UN LIBRO NO ES UNA PORTADA: ES UN OBJETO CON CUATRO CARAS.
+   *
+   * Hasta aquí solo existía la de delante, y por eso el diseño se sentía como
+   * hacer una miniatura y no como preparar una edición. Lo que sigue es lo que
+   * convierte esa imagen en un libro: qué pone detrás, qué pone en el lomo y
+   * cuánto abulta. Todo opcional — un libro escrito antes de esto se compone
+   * exactamente igual que siempre.
+   */
+
+  /** El texto de la contraportada: la sinopsis, la frase de la faja. */
+  contra?: string;
+  /** Lo que va en el lomo. Vacío significa el título del libro. */
+  lomo?: string;
+  /**
+   * Lo que abulta, en porcentaje del ancho de la tapa.
+   *
+   * En porcentaje y no en milímetros a propósito: la portada se dibuja a tres
+   * tamaños y el lomo tiene que crecer con ella. Un 8 % es una novela normal;
+   * un 3 %, una plaquette; un 18 %, un tocho.
+   */
+  grosor?: number;
+  /**
+   * Cómo está encuadrada la fotografía dentro de su hueco.
+   *
+   * `x` e `y` son el punto de la imagen que queda centrado, en porcentaje —lo
+   * mismo que `object-position`—, y `zoom` la amplía. Con los dos se recorta
+   * una foto sin tocar el archivo: se guardan cuatro números en lugar de una
+   * imagen nueva, y siempre se puede volver atrás.
+   */
+  encuadre?: { x: number; y: number; zoom: number };
 }
 
 /**
